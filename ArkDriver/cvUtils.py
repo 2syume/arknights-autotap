@@ -1,8 +1,9 @@
 import cv2
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageOps
 import numpy as np
 from skimage.metrics import structural_similarity
 from io import BytesIO
+from pytesseract import image_to_string
 
 def pil_to_bytes(pil_img):
     buf = BytesIO()
@@ -55,12 +56,12 @@ def ssim_cv(cv_image_a, cv_image_b, weights=None):
 def ssim(pil_image_a, pil_image_b, weights=None):
     return ssim_cv(pil_to_cv(pil_image_a), pil_to_cv(pil_image_b), weights)
 
-def binarize(pil_image, threshhold):
-    l_img = pil_image.convert('L').point(lambda x: 255 if x > threshhold else 0, mode='L')
+def binarize(pil_image, threshold):
+    l_img = pil_image.convert('L').point(lambda x: 255 if x > threshold else 0, mode='L')
     return l_img
 
-def binarize_cv(cv_image, threshhold):
-    return cv2.threshold(cv_image, threshhold, 255, cv2.THRESH_BINARY)[1]
+def binarize_cv(cv_image, threshold):
+    return cv2.threshold(cv_image, threshold, 255, cv2.THRESH_BINARY)[1]
 
 def gray_cv(cv_image):
     return cv2.cvtColor(cv_image, cv2.COLOR_BGR2GRAY)
@@ -75,6 +76,16 @@ def color_distance_cv(cv_image, color):
     diff = np.sqrt(sum(diff_square_chans)) * 255 / 442
     return diff.astype(np.uint8)
 
+def ocr_text(pil_image, threshold=200, lang="chi_sim"):
+    binary = binarize(pil_image, threshold)
+    binary_a = np.array(binary)
+    n_w = np.sum(binary_a == 255)
+    n_b = binary_a.size - n_w
+    if n_w > n_b:
+        return image_to_string(binary, lang=lang)
+    else:
+        return image_to_string(ImageOps.invert(binary), lang=lang)
+    
 
 def find_shapes(pil_image, reference_color=None, threshold=150, canny_args=None, kernel=5):
     cv_img = pil_to_cv(pil_image)

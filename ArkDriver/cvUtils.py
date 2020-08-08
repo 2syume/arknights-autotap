@@ -1,5 +1,5 @@
 import cv2
-from PIL import Image
+from PIL import Image, ImageDraw
 import numpy as np
 from skimage.metrics import structural_similarity
 
@@ -45,6 +45,39 @@ def ssim_cv(cv_image_a, cv_image_b, weights=None):
 def ssim(pil_image_a, pil_image_b, weights=None):
     return ssim_cv(pil_to_cv(pil_image_a), pil_to_cv(pil_image_b), weights)
 
-def binarize(pil_image):
-    l_img = img.convert('L').point(lambda x: 255 if x > threshhold else 0, mode='L')
-    return l_img.convert('1')
+def binarize(pil_image, threshhold):
+    l_img = pil_image.convert('L').point(lambda x: 255 if x > threshhold else 0, mode='L')
+    return l_img
+
+def binarize_cv(cv_image, threshhold):
+    return cv2.threshold(cv_image, threshhold, 255, cv2.THRESH_BINARY)[1]
+
+
+def gray_cv(cv_image):
+    return cv2.cvtColor(cv_image, cv2.COLOR_BGR2GRAY)
+
+def color_distance_cv(cv_image, color):
+    shape = cv_image.shape[:-1]
+    chans = cv2.split(cv_image)
+    diff_square_chans = list(map(lambda x:(x[0] - np.full(shape, x[1]))**2, zip(chans, color)))
+    diff = np.sqrt(sum(diff_square_chans)) * 255 / 442
+    return diff.astype(np.uint8)
+
+def find_shapes(pil_image, reference_color=None, threshold=150, opening_kernel=5):
+    cv_img = pil_to_cv(pil_image)
+    if reference_color:
+        cv_img = color_distance_cv(cv_img, reference_color)
+    else:
+        cv_img = gray_cv(cv_img)
+    cv_img = binarize_cv(cv_img, threshold)
+    cv_img = cv2.morphologyEx(cv_img, cv2.MORPH_CLOSE, cv2.getStructuringElement(cv2.MORPH_RECT, (opening_kernel, opening_kernel)))
+    ctrs, _ = cv2.findContours(cv_img, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+    return list(map(lambda x: cv2.boundingRect(x), ctrs))
+
+def draw_shapes(pil_image, shapes):
+    drawn = pil_image.copy()
+    draw = ImageDraw.Draw(drawn)
+    for rect in shapes:
+        x, y, w, h = rect
+        draw.rectangle([x, y, x+w, y+h], outline=(255,0,0))
+    return drawn

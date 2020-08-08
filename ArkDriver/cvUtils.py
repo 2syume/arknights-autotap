@@ -63,14 +63,18 @@ def color_distance_cv(cv_image, color):
     diff = np.sqrt(sum(diff_square_chans)) * 255 / 442
     return diff.astype(np.uint8)
 
-def find_shapes(pil_image, reference_color=None, threshold=150, opening_kernel=5):
+
+def find_shapes(pil_image, reference_color=None, threshold=150, canny_args=None, kernel=5):
     cv_img = pil_to_cv(pil_image)
     if reference_color:
         cv_img = color_distance_cv(cv_img, reference_color)
     else:
         cv_img = gray_cv(cv_img)
-    cv_img = binarize_cv(cv_img, threshold)
-    cv_img = cv2.morphologyEx(cv_img, cv2.MORPH_CLOSE, cv2.getStructuringElement(cv2.MORPH_RECT, (opening_kernel, opening_kernel)))
+    if canny_args:
+        cv_img = cv2.Canny(cv_img, *canny_args)
+    else:
+        cv_img = binarize_cv(cv_img, threshold)
+    cv_img = cv2.morphologyEx(cv_img, cv2.MORPH_CLOSE, cv2.getStructuringElement(cv2.MORPH_RECT, (kernel, kernel)))
     ctrs, _ = cv2.findContours(cv_img, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
     return list(map(lambda x: cv2.boundingRect(x), ctrs))
 
@@ -81,3 +85,11 @@ def draw_shapes(pil_image, shapes):
         x, y, w, h = rect
         draw.rectangle([x, y, x+w, y+h], outline=(255,0,0))
     return drawn
+
+def filter_shapes(shapes, w, h, dw, dh):
+    filtered = []
+    for rect in shapes:
+        _, _, rw, rh = rect
+        if rw >= w and rw < w + dw and rh >= h and rh < h + dh:
+            filtered.append(rect)
+    return filtered

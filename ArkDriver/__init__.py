@@ -1,1 +1,1 @@
-__all__ = ['cvUtils']
+__all__ = ['cvUtils', 'AndroidDev']

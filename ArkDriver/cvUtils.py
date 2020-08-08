@@ -2,6 +2,16 @@ import cv2
 from PIL import Image, ImageDraw
 import numpy as np
 from skimage.metrics import structural_similarity
+from io import BytesIO
+
+def pil_to_bytes(pil_img):
+    buf = BytesIO()
+    pil_img.save(buf, format="PNG")
+    return buf.getvalue()
+
+def bytes_to_pil(bytes):
+    buf = BytesIO(bytes)
+    return Image.open(buf)
 
 def pil_to_cv(pil_img):
     # Greyscale Image
@@ -52,9 +62,11 @@ def binarize(pil_image, threshhold):
 def binarize_cv(cv_image, threshhold):
     return cv2.threshold(cv_image, threshhold, 255, cv2.THRESH_BINARY)[1]
 
-
 def gray_cv(cv_image):
     return cv2.cvtColor(cv_image, cv2.COLOR_BGR2GRAY)
+
+def canny(pil_image, *args):
+    return cv_to_pil(cv2.Canny(pil_to_cv(pil_image), *args))
 
 def color_distance_cv(cv_image, color):
     shape = cv_image.shape[:-1]

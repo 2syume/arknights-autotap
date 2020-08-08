@@ -43,7 +43,7 @@ class AndroidDev(object):
                 self._dev.shell(["screencap", "-p", self._screenshot_on_dev_path])
                 return
             except Exception as e:
-                WARN("Exception when taking screenshot:", e, "Retrying")
+                WARN("Exception when taking screenshot:", e, ",Retrying")
                 sleep(self._screenshot_retry_wait)
 
     def pull_screen(self):
@@ -53,7 +53,7 @@ class AndroidDev(object):
                 self._screen = Image.open(BytesIO(binary_data))
                 return
             except Exception as e:
-                WARN("Exception when pulling screenshot:", e, "Retrying")
+                WARN("Exception when pulling screenshot:", e, ",Retrying")
                 sleep(self._screenshot_retry_wait)
     
     def refresh_screen(self):

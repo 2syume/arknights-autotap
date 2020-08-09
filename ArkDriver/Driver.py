@@ -8,12 +8,9 @@ class ArkDriver(object):
             self._dev = android_dev
         else:
             self._dev = AndroidDev()
-        self.config = {"geometry": self._dev.get_geometry(), "pages":{}, "components":{}}
+        self.config = {"geometry": self._dev.get_geometry(), "components":{}}
         self.ref_data = {"components":{}}
         self.component_validation_cache = set()
-    
-    def set_page(self, name, page):
-        self.config["pages"][name] = page
     
     def set_component(self, name, component):
         self.config["components"][name] = component

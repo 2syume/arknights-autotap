@@ -23,6 +23,16 @@ components:
     text: "\u5F00 \u59CB \u884C \u52A8"
     threshold: 150
     type: ocr
+  missions.main_story.selected:
+    canny_args: null
+    crop: !!python/tuple
+    - 0
+    - 600
+    - 160
+    - 715
+    min_conf: 0.8
+    tap_offset: null
+    type: ssim
   tasks.got_rewards:
     crop: !!python/tuple
     - 580
@@ -38,4 +48,3 @@ components:
 geometry: !!python/tuple
 - 1280
 - 720
-pages: {}

@@ -67,4 +67,3 @@ float_boxes:
 geometry: !!python/tuple
 - 1280
 - 720
-pages: {}

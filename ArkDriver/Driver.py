@@ -10,6 +10,7 @@ class ArkDriver(object):
             self._dev = AndroidDev()
         self.config = {"geometry": self._dev.get_geometry(), "pages":{}, "components":{}}
         self.ref_data = {"components":{}}
+        self.component_validation_cache = set()
     
     def set_page(self, name, page):
         self.config["pages"][name] = page
@@ -20,10 +21,16 @@ class ArkDriver(object):
     def set_component_ref_data(self, name, data):
         self.ref_data["components"][name] = data
     
+    def clear_caches(self):
+        self.component_validation_cache.clear()
+    
     def refresh_screen(self):
+        self.clear_caches()
         return self._dev.refresh_screen()
     
     def validate_component(self, name):
+        if name in self.component_validation_cache:
+            return True
         if not name in self.config["components"]:
             return False
         config = self.config["components"][name]
@@ -36,6 +43,7 @@ class ArkDriver(object):
                 cropped = canny(cropped, *config["canny_args"])
             conf = ssim(cropped, ref)
             if conf >= config["min_conf"]:
+                self.component_validation_cache.add(name)
                 return True
             else:
                 return False
@@ -45,6 +53,7 @@ class ArkDriver(object):
             cropped = binarize(cropped, config["threshold"])
             text = ocr_text(cropped)
             if text == config["text"]:
+                self.component_validation_cache.add(name)
                 return True
             else:
                 return False

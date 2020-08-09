@@ -45,6 +45,26 @@ components:
     text: "\u83B7 \u5F97 \u7269 \u8D44"
     threshold: 150
     type: ocr
+float_boxes:
+  missions.main_story.chapters:
+    canny_args: null
+    crop: !!python/tuple
+    - 0
+    - 80
+    - 1280
+    - 600
+    deps:
+    - missions.main_story.selected
+    kernel: 5
+    ref_color: null
+    repeat: null
+    shape: !!python/tuple
+    - 410
+    - 470
+    - 20
+    - 20
+    threshold: 200
 geometry: !!python/tuple
 - 1280
 - 720
+pages: {}

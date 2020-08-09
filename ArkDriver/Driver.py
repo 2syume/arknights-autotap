@@ -8,7 +8,7 @@ class ArkDriver(object):
             self._dev = android_dev
         else:
             self._dev = AndroidDev()
-        self.config = {"geometry": self._dev.get_geometry(), "components":{}}
+        self.config = {"geometry": self._dev.get_geometry(), "components":{}, "float_boxes": {}}
         self.ref_data = {"components":{}}
         self.component_validation_cache = set()
     
@@ -17,6 +17,9 @@ class ArkDriver(object):
     
     def set_component_ref_data(self, name, data):
         self.ref_data["components"][name] = data
+    
+    def set_float_box(self, name, float_box):
+        self.config["float_boxes"][name] = float_box
     
     def clear_caches(self):
         self.component_validation_cache.clear()
@@ -64,6 +67,24 @@ class ArkDriver(object):
                         config["crop"][1] + config["tap_offset"][1])
         self._dev.tap(*tap_position)
         return True
+
+    def find_float_box(self, name, draw=False):
+        if not name in self.config["float_boxes"]:
+            return None
+        config = self.config["float_boxes"][name]
+
+        for dep in config["deps"]:
+            if not self.validate_component(dep):
+                return None
+        floats = find_floats(self._dev.get_screen(), config["crop"], config["shape"],
+            config.get("ref_color", None),
+            config.get("threshold", 150),
+            config.get("canny_args", None),
+            config.get("kernel", 5),
+            config.get("repeat", None))
+        if draw:
+            draw_shapes(self._dev.get_screen(), floats).show()
+        return floats
         
 
     def new_ssim_component(self, crop,
@@ -102,4 +123,18 @@ class ArkDriver(object):
             "tap_offset": tap_offset
         }
 
-        
+    def new_float_box(self, deps, crop, shape, ref_color=None, threshold=150, canny_args=None, kernel=5, repeat=None, draw=True):
+        spec = {
+            "deps": deps,
+            "crop": crop,
+            "shape": shape,
+            "ref_color": None,
+            "threshold": threshold,
+            "canny_args": canny_args,
+            "kernel": kernel,
+            "repeat": repeat
+        }
+        if draw:
+            floats = find_floats(self._dev.get_screen(), crop, shape, ref_color, threshold, canny_args, kernel, repeat)
+            draw_shapes(self._dev.get_screen(), floats).show()
+        return spec

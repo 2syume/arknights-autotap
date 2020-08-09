@@ -4,6 +4,7 @@ import numpy as np
 from skimage.metrics import structural_similarity
 from io import BytesIO
 from pytesseract import image_to_string
+import random
 
 def pil_to_bytes(pil_img):
     buf = BytesIO()
@@ -85,8 +86,32 @@ def ocr_text(pil_image, threshold=200, lang="chi_sim"):
         return image_to_string(binary, lang=lang)
     else:
         return image_to_string(ImageOps.invert(binary), lang=lang)
-    
 
+def find_floats(pil_image, crop, shape, reference_color=None, threshold=150, canny_args=None, kernel=5, repeat=None):
+    cropped = pil_image.crop(crop)
+    dx, dy, _, _ = crop
+    inner_floats = filter_shapes(find_shapes(cropped, reference_color, threshold, canny_args, kernel), *shape)
+    floats = list(map(lambda t: (t[0]+dx, t[1]+dy, t[2], t[3]), inner_floats))
+    if repeat:
+        x, y, w, h = random.choice(floats)
+        x_int, y_int, x_lower, y_lower, x_upper, y_upper = repeat
+        x_series = expand_to_series(x, w, x_int, x_lower, y_upper)
+        y_series = expand_to_series(y, h, y_int, y_lower, y_upper)
+        expanded_x_y = cv2.merge(np.meshgrid(x_series, y_series))[0].tolist()
+        floats = list(map(lambda xy: (xy[0], xy[1], w, h), expanded_x_y))
+    return floats
+
+
+def expand_to_series(x, w, x_int, x_lower, x_upper):
+    if x_int > 0:
+        return np.array(
+            [x - x_int * i for i in range(x_bound // x_int + 1) if (x - x_int * i) >= x_lower and (x - x_int * i + w) <= x_upper] +
+            [x + x_int * i for i in range(1, x_bound // x_int + 1) if (x + x_int * i) >= x_lower and (x + x_int * i + w) <= x_upper]
+        )
+    else:
+        return np.array([x])
+    
+    
 def find_shapes(pil_image, reference_color=None, threshold=150, canny_args=None, kernel=5):
     cv_img = pil_to_cv(pil_image)
     if reference_color:

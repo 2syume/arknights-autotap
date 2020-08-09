@@ -58,7 +58,7 @@ class ArkDriver(object):
             else:
                 return False
     
-    def validate_and_tap_component(self, name):
+    def tap_component(self, name):
         if not self.validate_component(name):
             return False
         config = self.config["components"][name]

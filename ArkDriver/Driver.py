@@ -8,9 +8,10 @@ class ArkDriver(object):
             self._dev = android_dev
         else:
             self._dev = AndroidDev()
-        self.config = {"geometry": self._dev.get_geometry(), "components":{}, "float_boxes": {}}
+        self.config = {"geometry": self._dev.get_geometry(), "components":{}, "boxes": {}}
         self.ref_data = {"components":{}}
-        self.component_validation_cache = set()
+        self.component_validation_cache = {}
+        self.box_cache = {}
     
     def set_component(self, name, component):
         self.config["components"][name] = component
@@ -18,11 +19,12 @@ class ArkDriver(object):
     def set_component_ref_data(self, name, data):
         self.ref_data["components"][name] = data
     
-    def set_float_box(self, name, float_box):
-        self.config["float_boxes"][name] = float_box
+    def set_box(self, name, box):
+        self.config["boxes"][name] = box
     
     def clear_caches(self):
         self.component_validation_cache.clear()
+        self.box_cache.clear()
     
     def refresh_screen(self):
         self.clear_caches()
@@ -30,7 +32,7 @@ class ArkDriver(object):
     
     def validate_component(self, name):
         if name in self.component_validation_cache:
-            return True
+            return self.component_validation_cache[name] 
         if not name in self.config["components"]:
             return False
         config = self.config["components"][name]
@@ -43,9 +45,10 @@ class ArkDriver(object):
                 cropped = canny(cropped, *config["canny_args"])
             conf = ssim(cropped, ref)
             if conf >= config["min_conf"]:
-                self.component_validation_cache.add(name)
+                self.component_validation_cache[name] = True
                 return True
             else:
+                self.component_validation_cache[name] = False
                 return False
         
         if config["type"] == "ocr":
@@ -53,9 +56,10 @@ class ArkDriver(object):
             cropped = binarize(cropped, config["threshold"])
             text = ocr_text(cropped)
             if text == config["text"]:
-                self.component_validation_cache.add(name)
+                self.component_validation_cache[name] = True
                 return True
             else:
+                self.component_validation_cache[name] = False
                 return False
     
     def tap_component(self, name):
@@ -68,23 +72,32 @@ class ArkDriver(object):
         self._dev.tap(*tap_position)
         return True
 
-    def find_float_box(self, name, draw=False):
-        if not name in self.config["float_boxes"]:
+    def find_box(self, name, draw=False):
+        if name in self.box_cache:
+            return self.box_cache
+        if not name in self.config["boxes"]:
             return None
-        config = self.config["float_boxes"][name]
+        config = self.config["boxes"][name]
 
         for dep in config["deps"]:
             if not self.validate_component(dep):
                 return None
-        floats = find_floats(self._dev.get_screen(), config["crop"], config["shape"],
-            config.get("ref_color", None),
-            config.get("threshold", 150),
-            config.get("canny_args", None),
-            config.get("kernel", 5),
-            config.get("repeat", None))
-        if draw:
-            draw_shapes(self._dev.get_screen(), floats).show()
-        return floats
+        if config["type"] == "float":
+            floats = find_floats(self._dev.get_screen(), config["crop"], config["shape"],
+                config.get("ref_color", None),
+                config.get("threshold", 150),
+                config.get("canny_args", None),
+                config.get("kernel", 5),
+                config.get("repeat", None))
+            if draw:
+                draw_shapes(self._dev.get_screen(), floats).show()
+            self.box_cache[name] = floats
+            return floats
+        
+        if config["type"] == "fixed":
+            rects = config["rects"]
+            self.box_cache[name] = rects
+            return rects
         
 
     def new_ssim_component(self, crop,
@@ -125,6 +138,7 @@ class ArkDriver(object):
 
     def new_float_box(self, deps, crop, shape, ref_color=None, threshold=150, canny_args=None, kernel=5, repeat=None, draw=True):
         spec = {
+            "type": "float",
             "deps": deps,
             "crop": crop,
             "shape": shape,
@@ -137,4 +151,14 @@ class ArkDriver(object):
         if draw:
             floats = find_floats(self._dev.get_screen(), crop, shape, ref_color, threshold, canny_args, kernel, repeat)
             draw_shapes(self._dev.get_screen(), floats).show()
+        return spec
+    
+    def new_fixed_box(self, deps, rects, draw=True) :
+        spec = {
+            "type": "fixed",
+            "deps": deps,
+            "rects": rects
+        }
+        if draw:
+            draw_shapes(self._dev.get_screen(), rects).show()
         return spec

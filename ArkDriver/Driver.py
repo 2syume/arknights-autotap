@@ -8,10 +8,11 @@ class ArkDriver(object):
             self._dev = android_dev
         else:
             self._dev = AndroidDev()
-        self.config = {"geometry": self._dev.get_geometry(), "components":{}, "boxes": {}}
+        self.config = {"geometry": self._dev.get_geometry(), "components":{}, "boxes": {}, "query_sets": {}}
         self.ref_data = {"components":{}}
         self.component_validation_cache = {}
         self.box_cache = {}
+        self.query_set_cache = {}
     
     def set_component(self, name, component):
         self.config["components"][name] = component
@@ -21,10 +22,14 @@ class ArkDriver(object):
     
     def set_box(self, name, box):
         self.config["boxes"][name] = box
+
+    def set_query_set(self, name, q_set):
+        self.config["query_sets"][name] = q_set
     
     def clear_caches(self):
         self.component_validation_cache.clear()
         self.box_cache.clear()
+        self.query_set_cache.clear()
     
     def refresh_screen(self):
         self.clear_caches()
@@ -53,8 +58,7 @@ class ArkDriver(object):
         
         if config["type"] == "ocr":
             cropped = self._dev.get_screen().crop(config["crop"])
-            cropped = binarize(cropped, config["threshold"])
-            text = ocr_text(cropped)
+            text = ocr_text(cropped, config["threshold"], config["lang"], config["config"])
             if text == config["text"]:
                 self.component_validation_cache[name] = True
                 return True
@@ -74,7 +78,7 @@ class ArkDriver(object):
 
     def find_box(self, name, draw=False):
         if name in self.box_cache:
-            return self.box_cache
+            return self.box_cache[name]
         if not name in self.config["boxes"]:
             return None
         config = self.config["boxes"][name]
@@ -98,7 +102,27 @@ class ArkDriver(object):
             rects = config["rects"]
             self.box_cache[name] = rects
             return rects
+    
+    def query_set(self, name):
+        if name in self.query_set_cache:
+            return self.query_set_cache[name]
+        if not name in self.config["query_sets"]:
+            return None
+        config = self.config["query_sets"][name]
+
+        for dep in config["deps"]:
+            if not self.validate_component(dep):
+                return None
+
+        result = [self.query(q) for q in config["queries"]]
+        self.query_set_cache[name] = result
+        return result
         
+    def query(self, query_config):
+        if query_config["type"] == "ocr":
+            cropped = self._dev.get_screen().crop(query_config["crop"])
+            text = ocr_text(cropped, query_config["threshold"], query_config["lang"], query_config["config"])
+            return text
 
     def new_ssim_component(self, crop,
         min_conf=0.8, canny_args=None,
@@ -121,11 +145,10 @@ class ArkDriver(object):
 
     
     def new_ocr_component(self, crop,
-        threshold=200,
+        threshold=200, lang="chi_sim", config=None,
         tap_offset=None, print_ref=True):
         cropped = self._dev.get_screen().crop(crop)
-        cropped = binarize(cropped, threshold)
-        text = ocr_text(cropped)
+        text = ocr_text(cropped, threshold, lang, config)
         if print_ref:
             print(text)
         return {
@@ -133,6 +156,8 @@ class ArkDriver(object):
             "crop": crop,
             "text": text,
             "threshold": threshold,
+            "lang":lang,
+            "config": config,
             "tap_offset": tap_offset
         }
 
@@ -161,4 +186,25 @@ class ArkDriver(object):
         }
         if draw:
             draw_shapes(self._dev.get_screen(), rects).show()
+        return spec
+
+    def new_query_set(self, deps):
+        spec = {
+            "deps": deps,
+            "queries": []
+        }
+        return spec
+    
+    def new_ocr_query(self, crop, threshold=200, lang="chi_sim", config=None, print_ref=True):
+        spec = {
+            "type": "ocr",
+            "crop": crop,
+            "threshold": threshold,
+            "lang": lang,
+            "config": config
+        }
+        cropped = self._dev.get_screen().crop(crop)
+        text = ocr_text(cropped, threshold, lang, config)
+        if print_ref:
+            print(text)
         return spec

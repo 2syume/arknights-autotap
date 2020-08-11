@@ -54,6 +54,8 @@ components:
     - 0
     text: "\u5F00 \u59CB \u884C \u52A8"
     threshold: 150
+    config: null
+    lang: chi_sim
     type: ocr
   missions.main_story.selected:
     canny_args: null
@@ -76,7 +78,50 @@ components:
     - 510
     text: "\u83B7 \u5F97 \u7269 \u8D44"
     threshold: 150
+    config: null
+    lang: chi_sim
     type: ocr
 geometry: !!python/tuple
 - 1280
 - 720
+query_sets:
+  map_selected.info:
+    deps:
+    - map_selected.start
+    queries:
+    - crop: !!python/tuple
+      - 810
+      - 112
+      - 960
+      - 149
+      threshold: 200
+      type: ocr
+      config: null
+      lang: chi_sim
+    - crop: !!python/tuple
+      - 880
+      - 83
+      - 965
+      - 108
+      threshold: 200
+      type: ocr
+      config: null
+      lang: eng 
+    - crop: !!python/tuple
+      - 1184
+      - 677
+      - 1228
+      - 714
+      threshold: 200
+      type: ocr
+      config: null
+      lang: eng 
+    - crop: !!python/tuple
+      - 1120
+      - 20
+      - 1240
+      - 60
+      threshold: 200
+      type: ocr
+      config: null
+      lang: eng 

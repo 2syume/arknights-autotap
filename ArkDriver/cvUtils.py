@@ -77,15 +77,17 @@ def color_distance_cv(cv_image, color):
     diff = np.sqrt(sum(diff_square_chans)) * 255 / 442
     return diff.astype(np.uint8)
 
-def ocr_text(pil_image, threshold=200, lang="chi_sim"):
+def ocr_text(pil_image, threshold=200, lang="chi_sim", config=None):
     binary = binarize(pil_image, threshold)
     binary_a = np.array(binary)
     n_w = np.sum(binary_a == 255)
     n_b = binary_a.size - n_w
+    if config == None:
+        config = "--psm 7"
     if n_w > n_b:
-        return image_to_string(binary, lang=lang)
+        return image_to_string(binary, lang=lang, config=config)
     else:
-        return image_to_string(ImageOps.invert(binary), lang=lang)
+        return image_to_string(ImageOps.invert(binary), lang=lang, config=config)
 
 def find_floats(pil_image, crop, shape, reference_color=None, threshold=150, canny_args=None, kernel=5, repeat=None):
     cropped = pil_image.crop(crop)

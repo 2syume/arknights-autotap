@@ -21,14 +21,26 @@ class ConfiguredDriver(ArkDriver):
         self.current_map_name = ""
         self.current_map_name_chi = ""
 
-    def goto_missions(self):
-        self.refresh_screen()
-        if self.validate_component("missions.main_story.selected"):
-            return True
-        if self.tap_refresh_component("main.missions"):
-            return True
-        if self.tap_refresh_component("menu") and self.tap_refresh_component("menu.main") and self.tap_refresh_component("main.missions"):
-            return True
+    def goto_missions(self, check_intern=60):
+        failure_timer = 0
+        while failure_timer < FAIL_RETRY:
+            self.refresh_screen()
+            if self.validate_component("missions.main_story.selected"):
+                return True
+
+            print("- Navigating to missions page")
+            while self.is_in_battle():
+                print("  Navigation: wait {} secs for running battle".format(check_intern))
+            if self.tap_battle_finished():
+                print("  Leaving battle finished page")
+
+            if self.tap_refresh_component("main.missions"):
+                return True
+            if self.tap_refresh_component("menu") and self.tap_refresh_component("menu.main") and self.tap_refresh_component("main.missions"):
+                return True
+            
+            print("  State recognition failure: {}/{}".format(failure_timer + 1, FAIL_RETRY))
+            failure_timer += 1
         return False
 
     def is_in_battle(self):
@@ -61,16 +73,16 @@ class ConfiguredDriver(ArkDriver):
             return True
         return False
     
-    def goto_map(self, map_name):
+    def goto_map(self, map_name, check_intern=60):
         if self.refresh_map_info():
             if self.current_map_name == map_name:
                 print("- Currently already on map {}, skipping navigation".format(map_name))
                 return
 
-        print("- Navigating to map {}".format(map_name))
-        if not self.goto_missions():
+        if not self.goto_missions(check_intern=check_intern):
             raise UnexpectedState()
 
+        print("- Navigating to map {}".format(map_name))
         # Obsidian Festival Retrospect
         if map_name.startswith("OF-"):
             if not self.tap_refresh_component("missions.of_r"):
@@ -92,19 +104,16 @@ class ConfiguredDriver(ArkDriver):
             return
         raise Unsupported()
 
+
     def farm_map(self, map_name, times=None, sanity_recovery=True, check_intern=60, wait_time=(30, 60)):
-        # Force no sanity recovery for OF festival stages
+        # Special cases
+        # Force sanity recovery off for Obsidian Festival stages
         if map_name.startswith("OF-F"):
             sanity_recovery = False
-        self.goto_map(map_name)
-        self.farm_current_map(times, sanity_recovery, check_intern, wait_time)
 
-
-    def farm_current_map(self, times=None, sanity_recovery=True, check_intern=60, wait_time=(30, 60)):
         count = 0
         while True:
-            if not self.refresh_map_info():
-                raise UnexpectedState()
+            self.goto_map(map_name, check_intern=check_intern)
             print("- Farming {} {}: Round {}/{}".format(self.current_map_name, self.current_map_name_chi, count + 1, times if times else "INF"))
             print("  Current san: {} / Needed: {}".format(self.current_san, self.current_cost))
             if self.current_san < self.current_cost:

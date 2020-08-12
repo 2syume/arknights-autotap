@@ -61,26 +61,22 @@ class ConfiguredDriver(ArkDriver):
     def home(self, check_intern=30, delay=15):
         self.interrupt_user(check_intern)
         print("- Navigating to main page")
-        failure_timer = 0
-        while failure_timer < FAIL_RETRY:
-            self.refresh_screen()
-            while True:
-                if self.tap_refresh_component("menu.main", delay):
-                    break
-                if self.tap_refresh_component("menu") and \
-                    self.tap_refresh_component("menu.main", delay):
-                    break
-                if not self.tap_refresh_component("back"):
-                    break
+        self.refresh_screen()
+        while True:
             while self.validate_component("communicating"):
                 print("  Communicating, wait for {} secs".format(delay))
                 sleep(delay)
                 self.refresh_screen()
             if self.validate_component("main.settings"):
                 return True
-            print("  State recognition failure: {}/{}".format(failure_timer + 1, FAIL_RETRY))
-            failure_timer += 1
-        return False
+            if self.tap_refresh_component("menu.main", delay):
+                continue 
+            if self.tap_refresh_component("menu") and \
+                self.tap_refresh_component("menu.main", delay):
+                continue 
+            if self.tap_refresh_component("back"):
+                continue
+            return False
 
     def goto_missions(self, check_intern=30):
         self.refresh_screen()
@@ -89,9 +85,16 @@ class ConfiguredDriver(ArkDriver):
         if not self.home(check_intern):
             return False
         print("- Navigating to missions page")
-        if not self.tap_refresh_component("main.missions"):
+        if not self.ensure_tap("main.missions", "missions.main_story.inner"):
             return False
         return True
+
+    def ensure_tap(self, tap, next_page, delay=2.5):
+        while True:
+            if not self.tap_refresh_component(tap, delay):
+                return False
+            if self.validate_component(next_page):
+                return True
 
     def is_in_battle(self):
         self.refresh_screen()
@@ -111,11 +114,11 @@ class ConfiguredDriver(ArkDriver):
     
     def tap_prepare_battle(self):
         self.refresh_screen()
-        return self.tap_refresh_component("map_selected.start", delay=15)
+        return self.ensure_tap("map_selected.start", "prepare.start", delay=15)
 
     def tap_start_battle(self):
         self.refresh_screen()
-        return self.tap_refresh_component("prepare.start", delay=30)
+        return self.ensure_tap("prepare.start", "in_battle.autopilot.take_over", delay=30)
 
     def refresh_map_info(self):
         self.refresh_screen()
@@ -143,13 +146,13 @@ class ConfiguredDriver(ArkDriver):
         print("- Navigating to map {}".format(map_name))
         # Obsidian Festival Retrospect
         if map_name.startswith("OF-"):
-            if not self.tap_refresh_component("missions.of_r"):
+            if not self.ensure_tap("missions.of_r", "missions.of_r.main"):
                 raise UnexpectedState()
             if map_name.startswith("OF-F"):
-                if not self.tap_refresh_component("missions.of_r.fest"):
+                if not self.ensure_tap("missions.of_r.fest", "missions.of_r.maps.fest.selected"):
                     raise UnexpectedState()
             else:
-                if not self.tap_refresh_component("missions.of_r.main"):
+                if not self.ensure_tap("missions.of_r.main", "missions.of_r.maps.main.selected"):
                     raise UnexpectedState()
             search_result = self.search("maps.map_entry", lambda r: (r[0] and map_name in r[0]) or (r[1] and map_name in r[1]))
             if len(search_result) != 1:

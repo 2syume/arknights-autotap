@@ -259,6 +259,28 @@ components:
     - 140
     - 35
     type: ssim
+  missions.of_r.maps.fest.selected:
+    canny_args: null
+    crop: !!python/tuple
+    - 1075
+    - 600
+    - 1150
+    - 675
+    min_conf: 0.8
+    tap_offset: null
+    threshold: null
+    type: ssim
+  missions.of_r.maps.main.selected:
+    canny_args: null
+    crop: !!python/tuple
+    - 990
+    - 600
+    - 1065
+    - 675
+    min_conf: 0.8
+    tap_offset: null
+    threshold: null
+    type: ssim
   of_r.maps.obsidian_icon:
     canny_args: null
     crop: !!python/tuple

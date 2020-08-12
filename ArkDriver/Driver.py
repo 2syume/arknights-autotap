@@ -1,6 +1,8 @@
 from .AndroidDev import AndroidDev
 from .cvUtils import *
 from pprint import pprint
+import yaml, pickle
+import cv2
 
 class ArkDriver(object):
     def __init__(self, android_dev=None):
@@ -9,16 +11,32 @@ class ArkDriver(object):
         else:
             self._dev = AndroidDev()
         self.config = {"geometry": self._dev.get_geometry(), "components":{}, "boxes": {}, "query_sets": {}}
-        self.ref_data = {"components":{}}
+        self.geometry = self._dev.get_geometry()
+        self.ref_data = {"components":{}, "queries": {}, "subimages":{}}
         self.component_validation_cache = {}
         self.box_cache = {}
         self.query_set_cache = {}
     
+    def load_from_file(self, config_fn="config.yaml", ref_data_fn="ref.data"):
+        with open(config_fn) as f:
+            self.config = yaml.load(f, Loader=yaml.CLoader)
+        with open(ref_data_fn, "rb") as f:
+            self.ref_data = pickle.load(f)
+    
+    def save_to_file(self, config_fn="config.yaml", ref_data_fn="ref.data"):
+        with open(config_fn, "w") as f:
+            yaml.dump(self.config, f, Dumper=yaml.CDumper)
+        with open(ref_data_fn, "wb") as f:
+            pickle.dump(self.ref_data, f)
+
     def set_component(self, name, component):
         self.config["components"][name] = component
     
     def set_component_ref_data(self, name, data):
         self.ref_data["components"][name] = data
+    
+    def set_subimages_ref_data(self, name, data):
+        self.ref_data["subimages"][name] = data
     
     def set_box(self, name, box):
         self.config["boxes"][name] = box
@@ -100,8 +118,22 @@ class ArkDriver(object):
         
         if config["type"] == "fixed":
             rects = config["rects"]
+            if draw:
+                draw_shapes(self._dev.get_screen(), rects).show()
             self.box_cache[name] = rects
             return rects
+        
+        if config["type"] == "subimage":
+            subs = [bytes_to_pil(self.ref_data["subimages"][name]) for name in config["subimages"]]
+            boxes = match_sub_image(self._dev.get_screen(), subs, config["crop"],
+                config.get("method", cv2.TM_CCOEFF_NORMED),
+                config.get("match_th", 0.2),
+                config.get("ssim_th", 0.6),
+                config.get("weights", (1.0,1.0,1.0)))
+            if draw:
+                draw_shapes(self._dev.get_screen(), boxes).show()
+            self.box_cache[name] = boxes
+            return boxes
     
     def query_set(self, name):
         if name in self.query_set_cache:
@@ -114,15 +146,52 @@ class ArkDriver(object):
             if not self.validate_component(dep):
                 return None
 
-        result = [self.query(q) for q in config["queries"]]
-        self.query_set_cache[name] = result
-        return result
+        if config["type"] == "fixed":
+            result = [self.query(q) for q in config["queries"]]
+            self.query_set_cache[name] = result
+            return result
+        if config["type"] == "float":
+            boxes = self.find_box(config["box"])
+            result = [[self.query(q, (b[0], b[1])) for q in config["queries"]] for b in boxes]
+            self.query_set_cache[name] = result
+            return result
         
-    def query(self, query_config):
+    def query(self, query_config, offset=None):
         if query_config["type"] == "ocr":
-            cropped = self._dev.get_screen().crop(query_config["crop"])
-            text = ocr_text(cropped, query_config["threshold"], query_config["lang"], query_config["config"])
+            crop = query_config["crop"]
+            if offset:
+                if crop[2] + offset[0] > self.geometry[0] or crop[3] + offset[1] > self.geometry[1]:
+                    return None
+                crop = (crop[0] + offset[0], crop[1] + offset[1], crop[2] + offset[0], crop[3] + offset[1])
+            cropped = self._dev.get_screen().crop(crop)
+            text = ocr_text(cropped,
+                query_config.get("threshold", 200),
+                query_config.get("lang", "chi_sim"),
+                query_config.get("config", None))
             return text
+        if query_config["type"] == "ssim":
+            crop = query_config["crop"]
+            if offset:
+                if crop[2] + offset[0] > self.geometry[0] or crop[3] + offset[1] > self.geometry[1]:
+                    return None
+                crop = (crop[0] + offset[0], crop[1] + offset[1], crop[2] + offset[0], crop[3] + offset[1])
+            cropped = self._dev.get_screen().crop(crop)
+            if query_config.get("canny_args", None):
+                cropped = canny(cropped, *query_config["canny_args"])
+            query_dict = self.ref_data["queries"][query_config["query_dict"]]
+            results = [(ssim(bytes_to_pil(data), cropped), name) for name, data in query_dict.items()]
+            results = [r for r in results if r >= query_config.get("min_conf", 0.8)]
+            results.sort(key=lambda x: x[0])
+            results.reverse()
+            return results
+        if query_config["type"] == "tap":
+            tap_offset = query_config["tap_offset"]
+            if offset:
+                if tap_offset[0] + offset[0] > self.geometry[0] or tap_offset[1] + offset[1] > self.geometry[1]:
+                    return None
+                tap_offset = (tap_offset[0] + offset[0], tap_offset[1] + offset[1])
+            return tap_offset
+
 
     def new_ssim_component(self, crop,
         min_conf=0.8, canny_args=None,
@@ -188,14 +257,44 @@ class ArkDriver(object):
             draw_shapes(self._dev.get_screen(), rects).show()
         return spec
 
-    def new_query_set(self, deps):
+    def new_subimage_box(self, deps, crop, subimages,
+            method=cv2.TM_CCOEFF_NORMED, match_th=0.2,
+            ssim_th=0.6, weights=(1.0, 1.0, 1.0), draw=True):
+        spec = {
+            "type": "subimage",
+            "deps":deps,
+            "crop":crop,
+            "subimages": subimages,
+            "method": method,
+            "match_th": match_th,
+            "ssim_th": ssim_th,
+            "weights": weights
+        }
+        if draw:
+            subs = [bytes_to_pil(self.ref_data["subimages"][name]) for name in subimages]
+            boxes = match_sub_image(self._dev.get_screen(), subs, crop, method, match_th, ssim_th, weights)
+            draw_shapes(self._dev.get_screen(), boxes).show()
+        return spec
+
+
+    def new_fixed_query_set(self, deps):
         spec = {
             "deps": deps,
+            "type": "fixed",
             "queries": []
         }
         return spec
     
-    def new_ocr_query(self, crop, threshold=200, lang="chi_sim", config=None, print_ref=True):
+    def new_float_query_set(self, deps, box):
+        spec = {
+            "deps": deps,
+            "type": "float",
+            "box": box,
+            "queries": []
+        }
+        return spec
+    
+    def new_ocr_query(self, crop, threshold=200, lang="chi_sim", config=None, print_ref=True, test_offset=None):
         spec = {
             "type": "ocr",
             "crop": crop,
@@ -203,8 +302,35 @@ class ArkDriver(object):
             "lang": lang,
             "config": config
         }
-        cropped = self._dev.get_screen().crop(crop)
-        text = ocr_text(cropped, threshold, lang, config)
+        text = self.query(spec, test_offset)
         if print_ref:
             print(text)
         return spec
+    
+    def new_ssim_query(self, crop, query_dict, min_conf=0.8, canny_args=None, show_ref=True, test_offset=None):
+        spec = {
+            "type": "ssim",
+            "crop": crop,
+            "query_dict": query_dict,
+            "min_conf": min_conf,
+            "canny_args": canny_args
+        }
+        if test_offset:
+            crop = (crop[0] + test_offset[0], crop[1] + test_offset[1],
+                    crop[2] + test_offset[0], crop[3] + test_offset[1])
+        cropped = self._dev.get_screen().crop(crop)
+        if canny_args:
+            cropped = canny(cropped, *canny_args)
+        if show_ref:
+            cropped.show()
+            results = self.query(spec, test_offset)
+            print(results)
+        return spec
+
+    def new_tap_query(self, tap_offset):
+        spec = {
+            "type":"tap",
+            "tap_offset": tap_offset
+        }
+        return spec
+    

@@ -1,4 +1,22 @@
 boxes:
+  maps.indicators:
+    crop: !!python/tuple
+    - 0
+    - 65
+    - 1280
+    - 720
+    deps: []
+    match_th: 0.2
+    method: 5
+    ssim_th: 0.6
+    subimages:
+    - maps.three_star_indicator
+    - maps.four_star_indicator
+    type: subimage
+    weights: !!python/tuple
+    - 1.0
+    - 1.0
+    - 1.0
   missions.main_story.chapters:
     canny_args: null
     crop: !!python/tuple
@@ -44,19 +62,43 @@ components:
     tap_offset: null
     type: ssim
   map_selected.start:
+    config: null
     crop: !!python/tuple
     - 1120
     - 640
     - 1235
     - 675
+    lang: chi_sim
     tap_offset: !!python/tuple
     - 0
     - 0
     text: "\u5F00 \u59CB \u884C \u52A8"
     threshold: 150
-    config: null
-    lang: chi_sim
     type: ocr
+  menu:
+    canny_args: null
+    crop: !!python/tuple
+    - 165
+    - 15
+    - 370
+    - 60
+    min_conf: 0.8
+    tap_offset: !!python/tuple
+    - 100
+    - 20
+    type: ssim
+  menu.missions:
+    canny_args: null
+    crop: !!python/tuple
+    - 500
+    - 50
+    - 560
+    - 125
+    min_conf: 0.8
+    tap_offset: !!python/tuple
+    - 30
+    - 40
+    type: ssim
   missions.main_story.selected:
     canny_args: null
     crop: !!python/tuple
@@ -67,19 +109,55 @@ components:
     min_conf: 0.8
     tap_offset: null
     type: ssim
+  missions.of_r:
+    canny_args: null
+    crop: !!python/tuple
+    - 773
+    - 620
+    - 911
+    - 704
+    min_conf: 0.8
+    tap_offset: !!python/tuple
+    - 60
+    - 40
+    type: ssim
+  missions.of_r.fest:
+    canny_args: null
+    crop: !!python/tuple
+    - 908
+    - 383
+    - 1192
+    - 455
+    min_conf: 0.8
+    tap_offset: !!python/tuple
+    - 140
+    - 35
+    type: ssim
+  missions.of_r.main:
+    canny_args: null
+    crop: !!python/tuple
+    - 930
+    - 295
+    - 1214
+    - 367
+    min_conf: 0.8
+    tap_offset: !!python/tuple
+    - 140
+    - 35
+    type: ssim
   tasks.got_rewards:
+    config: null
     crop: !!python/tuple
     - 580
     - 135
     - 700
     - 175
+    lang: chi_sim
     tap_offset: !!python/tuple
     - 60
     - 510
     text: "\u83B7 \u5F97 \u7269 \u8D44"
     threshold: 150
-    config: null
-    lang: chi_sim
     type: ocr
 geometry: !!python/tuple
 - 1280
@@ -89,39 +167,67 @@ query_sets:
     deps:
     - map_selected.start
     queries:
-    - crop: !!python/tuple
+    - config: null
+      crop: !!python/tuple
       - 810
       - 112
       - 960
       - 149
+      lang: chi_sim
       threshold: 200
       type: ocr
-      config: null
-      lang: chi_sim
-    - crop: !!python/tuple
+    - config: null
+      crop: !!python/tuple
       - 880
       - 83
       - 965
       - 108
+      lang: eng
       threshold: 200
       type: ocr
-      config: null
-      lang: eng 
-    - crop: !!python/tuple
+    - config: null
+      crop: !!python/tuple
       - 1184
       - 677
       - 1228
       - 714
+      lang: eng
       threshold: 200
       type: ocr
-      config: null
-      lang: eng 
-    - crop: !!python/tuple
+    - config: null
+      crop: !!python/tuple
       - 1120
       - 20
       - 1240
       - 60
+      lang: eng
       threshold: 200
       type: ocr
-      config: null
-      lang: eng 
+    type: fixed
+  maps.map_name:
+    box: maps.indicators
+    deps: []
+    queries:
+    - config: null
+      crop: !!python/tuple
+      - 33
+      - 5
+      - 118
+      - 35
+      lang: eng
+      threshold: 125
+      type: ocr
+    - config: null
+      crop: !!python/tuple
+      - 33
+      - 5
+      - 145
+      - 35
+      lang: eng
+      threshold: 125
+      type: ocr
+    - tap_offset: !!python/tuple
+      - 80
+      - 15
+      type: tap
+    type: float

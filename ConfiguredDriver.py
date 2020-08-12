@@ -163,7 +163,10 @@ class ConfiguredDriver(ArkDriver):
         raise Unsupported()
 
 
-    def farm_map(self, map_name, times=None, sanity_recovery=True, check_intern=30, wait_time=(30, 60)):
+    def farm_map(self, map_name, times=None, sanity_recovery=True,
+        check_intern=30,
+        battle_finish_wait_time=(10, 70),
+        recovery_wait_time=(30, 600)):
         # Special cases
         # Force sanity recovery off for Obsidian Festival stages
         if map_name.startswith("OF-F"):
@@ -178,9 +181,12 @@ class ConfiguredDriver(ArkDriver):
                 if sanity_recovery:
                     wait_min = (self.current_cost - self.current_san) * 6 
                     print("  Not enough san, waiting for recovery: ", wait_min, "min")
-                    next_run_ts = int(time()) + wait_min * 60
+                    recovery_wait_sec = randint(*recovery_wait_time)
+                    print("  Adding {} secs as additional recovery time", recovery_wait_sec)
+                    wait_sec = 60 * wait_min + recovery_wait_sec
+                    next_run_ts = int(time()) + wait_sec
                     print("- Next scheduled check time: ", datetime.fromtimestamp(next_run_ts))
-                    sleep(60 * wait_min)
+                    sleep(wait_sec)
                     continue
                 else:
                     print("- San used up")
@@ -197,8 +203,8 @@ class ConfiguredDriver(ArkDriver):
                     print("  Battle still running, wait {} secs".format(check_intern))
                     sleep(check_intern)
                     continue
-                if wait_time:
-                    wait_secs = randint(*wait_time)
+                if battle_finish_wait_time:
+                    wait_secs = randint(*battle_finish_wait_time)
                     print("  Wait for {} seconds in result page before proceeding".format(wait_secs))
                 else:
                     wait_secs = 0

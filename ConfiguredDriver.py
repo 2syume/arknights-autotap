@@ -4,17 +4,19 @@ from datetime import datetime
 from random import randint
 
 class UnexpectedState(Exception):
-    pass
+    def __init__(self, *args, **argv):
+        super().__init__(*args, **argv)
 
 class Unsupported(Exception):
-    pass
+    def __init__(self, *args, **argv):
+        super().__init__(*args, **argv)
 
 FAIL_RETRY = 5
 RETRY_INTERN = 15
 
 class ConfiguredDriver(ArkDriver):
-    def __init__(self):
-        ArkDriver.__init__(self)
+    def __init__(self, *args, **argv):
+        super().__init__(*args, **argv)
         self.load_from_file()
         self.current_san = 0
         self.current_cost = 0

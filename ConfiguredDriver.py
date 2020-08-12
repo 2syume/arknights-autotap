@@ -22,6 +22,7 @@ class ConfiguredDriver(ArkDriver):
         self.current_cost = 0
         self.current_map_name = ""
         self.current_map_name_chi = ""
+        self.exc_log = {}
 
     def handle_popup(self, delay=15):
         handled = False
@@ -34,6 +35,30 @@ class ConfiguredDriver(ArkDriver):
             self.refresh_screen()
 
         return handled
+    
+    # -> None: Successful recovery
+    # -> Others: Failure to recover, should raise return value immediately
+    def recover_from_exc(self, exc_info):
+        if self.handle_popup():
+            return None
+
+        _, exc, tb = exc_info
+        f = tb.tb_frame
+        lineno = tb.tb_lineno
+        filename = f.f_code.co_filename
+
+        if filename != __file__:
+            return exc
+
+        count = self.exc_log.get((filename, lineno), 0)
+        if count >= FAIL_RETRY:
+            return exc
+        print("> Recovering from exception in {}:{} : {}".format(filename, lineno, exc))
+        count += 1
+        self.exc_log[(filename, lineno)] = count
+        print("  Waiting for {} secs before attempting recovery".format(RETRY_INTERN))
+        sleep(RETRY_INTERN)
+        return None
 
     def interrupt_user(self, check_intern=30):
         while self.is_in_battle():

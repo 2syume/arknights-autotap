@@ -1,5 +1,5 @@
 from ConfiguredDriver import ConfiguredDriver, UnexpectedState
-
+import sys
 
 driver = ConfiguredDriver()
 
@@ -20,8 +20,9 @@ try:
             if obs_count >= 1060:
                 farm_plan = ("OF-8", 1)
             driver.farm_map(*farm_plan)
-        except UnexpectedState as e:
-            if not driver.handle_popup():
-                raise e
+        except UnexpectedState:
+            exc = driver.recover_from_exc(sys.exc_info())
+            if exc is not None:
+                raise exc
 except KeyboardInterrupt:
     pass

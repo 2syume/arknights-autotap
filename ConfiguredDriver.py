@@ -45,24 +45,34 @@ class ConfiguredDriver(ArkDriver):
             self.refresh_screen()
 
 
-    def goto_missions(self, check_intern=60):
+    def home(self, check_intern=60):
+        self.interrupt_user(check_intern)
+        print("- Navigating to main page")
         failure_timer = 0
         while failure_timer < FAIL_RETRY:
             self.refresh_screen()
-            if self.validate_component("missions.main_story.selected"):
+            while True:
+                if self.tap_refresh_component("menu") and \
+                    self.tap_refresh_component("menu.main"):
+                    break
+                if not self.tap_refresh_component("back"):
+                    break
+            if self.validate_component("main.settings"):
                 return True
-
-            print("- Navigating to missions page")
-            self.interrupt_user(check_intern)
-
-            if self.tap_refresh_component("main.missions"):
-                return True
-            if self.tap_refresh_component("menu") and self.tap_refresh_component("menu.main") and self.tap_refresh_component("main.missions"):
-                return True
-            
             print("  State recognition failure: {}/{}".format(failure_timer + 1, FAIL_RETRY))
             failure_timer += 1
         return False
+
+    def goto_missions(self, check_intern=60):
+        self.refresh_screen()
+        if self.validate_component("missions.main_story.selected"):
+            return True
+        if not self.home(check_intern):
+            return False
+        print("- Navigating to missions page")
+        if not self.tap_refresh_component("main.missions"):
+            return False
+        return True
 
     def is_in_battle(self):
         self.refresh_screen()

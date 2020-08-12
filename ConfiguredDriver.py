@@ -24,6 +24,13 @@ class ConfiguredDriver(ArkDriver):
     def handle_popup(self):
         pass
 
+
+    def interrupt_user(self, check_intern=60):
+        while self.is_in_battle():
+            print("  Navigation: wait {} secs for running battle".format(check_intern))
+        if self.tap_battle_finished():
+            print("  Leaving battle finished page")
+
     def goto_missions(self, check_intern=60):
         failure_timer = 0
         while failure_timer < FAIL_RETRY:
@@ -32,10 +39,7 @@ class ConfiguredDriver(ArkDriver):
                 return True
 
             print("- Navigating to missions page")
-            while self.is_in_battle():
-                print("  Navigation: wait {} secs for running battle".format(check_intern))
-            if self.tap_battle_finished():
-                print("  Leaving battle finished page")
+            self.interrupt_user(check_intern)
 
             if self.tap_refresh_component("main.missions"):
                 return True
@@ -48,7 +52,11 @@ class ConfiguredDriver(ArkDriver):
 
     def is_in_battle(self):
         self.refresh_screen()
-        return self.validate_component("in_battle.take_over")
+        return self.validate_component("in_battle.enemy_icon")
+    
+    def is_in_autopilot_battle(self):
+        self.refresh_screen()
+        return self.validate_component("in_battle.autopilot.take_over")
     
     def tap_battle_finished(self, wait=0):
         self.refresh_screen()
@@ -139,7 +147,7 @@ class ConfiguredDriver(ArkDriver):
             print("  Battle started")
             failure_timer = 0
             while True:
-                if self.is_in_battle():
+                if self.is_in_autopilot_battle():
                     print("  Battle still running, wait {} secs".format(check_intern))
                     sleep(check_intern)
                     continue

@@ -2,9 +2,43 @@ import cv2
 from PIL import Image, ImageDraw, ImageOps
 import numpy as np
 from skimage.metrics import structural_similarity
+from scipy.ndimage.filters import maximum_filter
+from scipy.ndimage.morphology import generate_binary_structure, binary_erosion
 from io import BytesIO
 from pytesseract import image_to_string
 import random
+
+def detect_peaks(image):
+    """
+    Takes an image and detect the peaks usingthe local maximum filter.
+    Returns a boolean mask of the peaks (i.e. 1 when
+    the pixel's value is the neighborhood maximum, 0 otherwise)
+    """
+
+    # define an 8-connected neighborhood
+    neighborhood = generate_binary_structure(2,2)
+
+    #apply the local maximum filter; all pixel of maximal value 
+    #in their neighborhood are set to 1
+    local_max = maximum_filter(image, footprint=neighborhood)==image
+    #local_max is a mask that contains the peaks we are 
+    #looking for, but also the background.
+    #In order to isolate the peaks we must remove the background from the mask.
+
+    #we create the mask of the background
+    background = (image==0)
+
+    #a little technicality: we must erode the background in order to 
+    #successfully subtract it form local_max, otherwise a line will 
+    #appear along the background border (artifact of the local maximum filter)
+    eroded_background = binary_erosion(background, structure=neighborhood, border_value=1)
+
+    #we obtain the final mask, containing only peaks, 
+    #by removing the background from the local_max mask (xor operation)
+    detected_peaks = local_max ^ eroded_background
+
+    return detected_peaks
+
 
 def pil_to_bytes(pil_img):
     buf = BytesIO()
@@ -33,6 +67,9 @@ def extract_alpha(pil_img):
     return cv2.split(np.array(pil_img))[3]
 
 def weighted_mchan_op_cv(cv_image_a, cv_image_b, op, weights=None):
+    if len(cv_image_a.shape) == 2:
+        assert len(cv_image_b.shape) == 2
+        return op(cv_image_a, cv_image_b)
     assert cv_image_a.shape[2] == cv_image_b.shape[2]
 
     if weights is None:
@@ -102,6 +139,29 @@ def find_floats(pil_image, crop, shape, reference_color=None, threshold=150, can
         expanded_x_y = cv2.merge(np.meshgrid(x_series, y_series))[0].tolist()
         floats = list(map(lambda xy: (xy[0], xy[1], w, h), expanded_x_y))
     return floats
+
+def match_sub_image(pil_image, sub_images, crop=None, method=cv2.TM_CCOEFF_NORMED, match_th=0.2, ssim_th=0.6, weights=(1.0, 1.0, 1.0)):
+    if crop:
+        target_image = pil_image.crop(crop)
+    else:
+        target_image = pil_image
+    results = []
+    for sub_image in sub_images:
+        image = pil_to_cv(target_image)
+        template = pil_to_cv(sub_image)
+        match_op = lambda i, t: cv2.matchTemplate(i, t, method)
+        match_results = weighted_mchan_op_cv(image, template, match_op, weights)
+        peak_location = set(zip(*np.where(detect_peaks(match_results))[::-1]))
+        threshold_location = set(zip(*np.where(match_results >= match_th)[::-1]))
+        result = [(x, y, sub_image.width, sub_image.height) for x,y in peak_location.intersection(threshold_location)]
+        if ssim_th:
+            result = [(ssim(target_image.crop((r[0], r[1], r[0]+r[2], r[1]+r[3])), sub_image), r)
+                for r in result]
+            result = [r[1] for r in result if r[0] >= ssim_th]
+        results += result
+    if crop:
+        results = [(x + crop[0], y + crop[1], w, h) for x, y, w, h in results]
+    return results
 
 
 def expand_to_series(x, w, x_int, x_lower, x_upper):

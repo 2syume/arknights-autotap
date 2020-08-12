@@ -42,7 +42,7 @@ class ConfiguredDriver(ArkDriver):
         if self.handle_popup():
             return None
 
-        _, exc, tb = exc_info
+        exc_type, exc, tb = exc_info
         while tb.tb_next is not None:
             tb = tb.tb_next
         f = tb.tb_frame
@@ -55,7 +55,7 @@ class ConfiguredDriver(ArkDriver):
         count = self.exc_log.get((filename, lineno), 0)
         if count >= FAIL_RETRY:
             return exc
-        print("> Recovering from exception in {}:{} : {}".format(filename, lineno, exc))
+        print("> Recovering from exception in {}:{} : {}({})".format(filename, lineno, exc_type.__name__, exc))
         count += 1
         self.exc_log[(filename, lineno)] = count
         print("  Waiting for {} secs before attempting recovery".format(RETRY_INTERN))
@@ -94,8 +94,6 @@ class ConfiguredDriver(ArkDriver):
                 print("  Communicating, wait for {} secs".format(delay))
                 sleep(delay)
                 self.refresh_screen()
-            if self.validate_component("main.settings"):
-                return True
             if self.tap_refresh_component("menu.main", delay):
                 continue 
             if self.tap_refresh_component("menu") and \
@@ -103,6 +101,8 @@ class ConfiguredDriver(ArkDriver):
                 continue 
             if self.tap_refresh_component("back"):
                 continue
+            if self.validate_component("main.settings"):
+                return True
             return False
 
     def goto_missions(self, check_intern=30):

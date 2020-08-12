@@ -17,6 +17,7 @@ class ArkDriver(object):
         self.component_validation_cache = {}
         self.box_cache = {}
         self.query_set_cache = {}
+        self.last_log = {}
 
     def load_from_file(self, config_fn="config.yaml", ref_data_fn="ref.data"):
         with open(config_fn) as f:
@@ -58,6 +59,14 @@ class ArkDriver(object):
         sleep(delay)
         self.refresh_screen()
 
+    def print_last_log(self, last_log=None, show_img=True):
+        if last_log is None:
+            last_log = self.last_log
+        log = dict((k, v) for k,v in last_log.items() if not k.endswith("_img"))
+        pprint(log)
+        if show_img:
+            for name, img in [(k,v) for k,v in last_log.items() if k.endswith("_img")]:
+                img.show(title=name)
     
     def clear_caches(self):
         self.component_validation_cache.clear()
@@ -89,7 +98,16 @@ class ArkDriver(object):
             if config.get("canny_args", None):
                 cropped = canny(cropped, *config["canny_args"])
             conf = ssim(cropped, ref)
-            if conf >= config["min_conf"]:
+            result = conf >= config["min_conf"]
+
+            self.last_log = {
+                "name": name,
+                "result": result,
+                "src_img": cropped,
+                "ref_img": ref
+            }
+
+            if result:
                 self.component_validation_cache[name] = True
                 return True
             else:
@@ -99,7 +117,17 @@ class ArkDriver(object):
         if config["type"] == "ocr":
             cropped = self._dev.get_screen().crop(config["crop"])
             text = ocr_text(cropped, config["threshold"], config["lang"], config["config"])
-            if text == config["text"]:
+            result = text == config["text"]
+
+            self.last_log = {
+                "name": name,
+                "result": result,
+                "src_img": cropped,
+                "src_text": text,
+                "ref_text": config["text"]
+            }
+
+            if result:
                 self.component_validation_cache[name] = True
                 return True
             else:
@@ -133,15 +161,31 @@ class ArkDriver(object):
                 config.get("canny_args", None),
                 config.get("kernel", 5),
                 config.get("repeat", None))
+            drawn = draw_shapes(self._dev.get_screen(), floats)
             if draw:
-                draw_shapes(self._dev.get_screen(), floats).show()
+                drawn.show()
+            
+            self.last_log = {
+                "name": name,
+                "result": floats,
+                "boxes_img": drawn
+            }
+
             self.box_cache[name] = floats
             return floats
         
         if config["type"] == "fixed":
             rects = config["rects"]
+            drawn = draw_shapes(self._dev.get_screen(), rects)
             if draw:
-                draw_shapes(self._dev.get_screen(), rects).show()
+                drawn.show()
+            
+            self.last_log = {
+                "name": name,
+                "result": rects,
+                "boxes_img": drawn
+            }
+
             self.box_cache[name] = rects
             return rects
         
@@ -152,8 +196,16 @@ class ArkDriver(object):
                 config.get("match_th", 0.2),
                 config.get("ssim_th", 0.6),
                 config.get("weights", (1.0,1.0,1.0)))
+            drawn = draw_shapes(self._dev.get_screen(), boxes)
             if draw:
-                draw_shapes(self._dev.get_screen(), boxes).show()
+                drawn.show()
+            
+            self.last_log = {
+                "name": name,
+                "result": boxes,
+                "boxes_img": drawn
+            }
+
             self.box_cache[name] = boxes
             return boxes
     
@@ -170,11 +222,23 @@ class ArkDriver(object):
 
         if config["type"] == "fixed":
             result = [self.query(q) for q in config["queries"]]
+
+            self.last_log = {
+                "name": name,
+                "result": result
+            }
+
             self.query_set_cache[name] = result
             return result
         if config["type"] == "float":
             boxes = self.find_box(config["box"])
             result = [[self.query(q, (b[0], b[1])) for q in config["queries"]] for b in boxes]
+
+            self.last_log = {
+                "name": name,
+                "result": result
+            }
+
             self.query_set_cache[name] = result
             return result
         
@@ -239,14 +303,19 @@ class ArkDriver(object):
 
         count = -1
         last_query_result = None
+        search_log = []
         while True:
             query_result = self.query_set(config["query_set"])
+            search_log.append(query_result)
             result = [r for r in query_result if callback(r)]
             if result:
-                return result
+                status = "Found"
+                break
             
             if last_query_result == query_result:
-                return []
+                result = []
+                status = "Repeated result"
+                break
             last_query_result = query_result
 
             if count == -1:
@@ -255,7 +324,17 @@ class ArkDriver(object):
                 self.swipe_refresh(*config["next_swipe"])
             count += 1
             if count > config["bound"]:
-                return []
+                result = []
+                status = "Reached bound"
+                break
+
+        self.last_log = {
+            "name": name,
+            "result": result,
+            "search_log": search_log,
+            "status": status
+        }
+        return result
 
 
     def new_ssim_component(self, crop,

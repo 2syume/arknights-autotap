@@ -211,6 +211,16 @@ components:
     - 140
     - 35
     type: ssim
+  of_r.maps.obsidian_icon:
+    canny_args: null
+    crop: !!python/tuple
+    - 70
+    - 643
+    - 145
+    - 673
+    min_conf: 0.8
+    tap_offset: null
+    type: ssim
   prepare.start:
     canny_args: null
     crop: !!python/tuple
@@ -309,6 +319,20 @@ query_sets:
       - 15
       type: tap
     type: float
+  of_r.maps.obsidian_count:
+    deps:
+    - of_r.maps.obsidian_icon
+    queries:
+    - config: null
+      crop: !!python/tuple
+      - 200
+      - 648
+      - 275
+      - 670
+      lang: eng
+      threshold: 200
+      type: ocr
+    type: fixed
 searches:
   maps.map_entry:
     bound: 20

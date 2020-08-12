@@ -5,6 +5,7 @@ driver = ConfiguredDriver()
 
 try:
     while True:
+        driver.refresh_screen()
         obsidian_query = driver.query_set("of_r.maps.obsidian_count")
         if not obsidian_query:
             driver.goto_map("OF-6")

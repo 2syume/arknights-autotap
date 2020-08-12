@@ -63,8 +63,14 @@ def cv_to_pil(cv_img):
     return Image.fromarray(cv2.cvtColor(cv_img, cv2.COLOR_BGR2RGB))
 
 def extract_alpha(pil_img):
-    assert pil_img.mode == "RGBA"
-    return cv2.split(np.array(pil_img))[3]
+    if pil_img.mode[-1] == "A":
+        split = cv2.split(np.array(pil_img))
+        if len(split) == 2:
+            return (cv_to_pil(split[0]), cv_to_pil(split[1]))
+        else:
+            return (cv_to_pil(cv2.merge(split[:-1])), cv_to_pil(split[-1]))
+    else:
+        return (pil_img, None)
 
 def weighted_mchan_op_cv(cv_image_a, cv_image_b, op, weights=None):
     if len(cv_image_a.shape) == 2:

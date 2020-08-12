@@ -63,6 +63,17 @@ components:
     text: "\u884C \u52A8 \u7ED3 \u675F"
     threshold: 200
     type: ocr
+  communicating:
+    canny_args: null
+    crop: !!python/tuple
+    - 611
+    - 636
+    - 669
+    - 694
+    min_conf: 0.9
+    tap_offset: null
+    threshold: 225
+    type: ssim
   in_battle.autopilot.take_over:
     canny_args: null
     crop: !!python/tuple

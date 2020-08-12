@@ -77,8 +77,15 @@ class ArkDriver(object):
         
         if config["type"] == "ssim":
             ref = bytes_to_pil(self.ref_data["components"][name])
+            ref, mask = extract_alpha(ref)
 
             cropped = self._dev.get_screen().crop(config["crop"])
+            cropped, _ = extract_alpha(cropped)
+            if mask:
+                cropped = Image.composite(cropped, Image.new(cropped.mode, cropped.size), mask)
+                ref = Image.composite(ref, Image.new(ref.mode, ref.size), mask)
+            if config.get("threshold", None):
+                cropped = binarize(cropped, config["threshold"])
             if config.get("canny_args", None):
                 cropped = canny(cropped, *config["canny_args"])
             conf = ssim(cropped, ref)
@@ -191,10 +198,23 @@ class ArkDriver(object):
                     return None
                 crop = (crop[0] + offset[0], crop[1] + offset[1], crop[2] + offset[0], crop[3] + offset[1])
             cropped = self._dev.get_screen().crop(crop)
-            if query_config.get("canny_args", None):
-                cropped = canny(cropped, *query_config["canny_args"])
             query_dict = self.ref_data["queries"][query_config["query_dict"]]
-            results = [(ssim(bytes_to_pil(data), cropped), name) for name, data in query_dict.items()]
+            results = []
+            for name in query_dict:
+                ref = bytes_to_pil(query_dict[name])
+                ref, mask = extract_alpha(ref)
+                preprocessed, _ = extract_alpha(ref)
+
+                if mask:
+                    preprocessed = Image.composite(preprocessed, Image.new(preprocessed.mode, preprocessed.size), mask)
+                    ref = Image.composite(ref, Image.new(ref.mode, ref.size), mask)
+                if config.get("threshold", None):
+                    preprocessed =  binarize(preprocessed, config["threshold"])
+                if query_config.get("canny_args", None):
+                    preprocessed = canny(preprocessed, *query_config["canny_args"])
+
+                results.append((ssim(ref, preprocessed), name))
+
             results = [r for r in results if r >= query_config.get("min_conf", 0.8)]
             results.sort(key=lambda x: x[0])
             results.reverse()
@@ -239,9 +259,11 @@ class ArkDriver(object):
 
 
     def new_ssim_component(self, crop,
-        min_conf=0.8, canny_args=None,
+        min_conf=0.8, threshold=None, canny_args=None,
         tap_offset=None, show_ref=True):
         cropped = self._dev.get_screen().crop(crop)
+        if threshold:
+            cropped = binarize(cropped, threshold)
         if canny_args:
             cropped = canny(cropped, *canny_args)
         if show_ref:
@@ -252,6 +274,7 @@ class ArkDriver(object):
                 "crop": crop,
                 "min_conf": min_conf,
                 "canny_args": canny_args,
+                "threshold": threshold,
                 "tap_offset": tap_offset
             }
             , pil_to_bytes(cropped)
@@ -352,18 +375,21 @@ class ArkDriver(object):
             print(text)
         return spec
     
-    def new_ssim_query(self, crop, query_dict, min_conf=0.8, canny_args=None, show_ref=True, test_offset=None):
+    def new_ssim_query(self, crop, query_dict, min_conf=0.8, threshold=None, canny_args=None, show_ref=True, test_offset=None):
         spec = {
             "type": "ssim",
             "crop": crop,
             "query_dict": query_dict,
             "min_conf": min_conf,
+            "threshold": threshold,
             "canny_args": canny_args
         }
         if test_offset:
             crop = (crop[0] + test_offset[0], crop[1] + test_offset[1],
                     crop[2] + test_offset[0], crop[3] + test_offset[1])
         cropped = self._dev.get_screen().crop(crop)
+        if threshold:
+            cropped = binarize(cropped, threshold)
         if canny_args:
             cropped = canny(cropped, *canny_args)
         if show_ref:

@@ -22,8 +22,7 @@ class ConfiguredDriver(ArkDriver):
         self.current_map_name_chi = ""
 
     def handle_popup(self):
-        pass
-
+        return False
 
     def interrupt_user(self, check_intern=60):
         while self.is_in_battle():

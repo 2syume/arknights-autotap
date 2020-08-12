@@ -43,6 +43,8 @@ class ConfiguredDriver(ArkDriver):
             return None
 
         _, exc, tb = exc_info
+        while tb.tb_next is not None:
+            tb = tb.tb_next
         f = tb.tb_frame
         lineno = tb.tb_lineno
         filename = f.f_code.co_filename

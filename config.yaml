@@ -139,6 +139,20 @@ components:
     - 100
     - 20
     type: ssim
+  menu.main:
+    canny_args: !!python/tuple
+    - 50
+    - 100
+    crop: !!python/tuple
+    - 55
+    - 230
+    - 130
+    - 305
+    min_conf: 0.8
+    tap_offset: !!python/tuple
+    - 35
+    - 35
+    type: ssim
   menu.missions:
     canny_args: null
     crop: !!python/tuple

@@ -182,7 +182,7 @@ class ConfiguredDriver(ArkDriver):
                     wait_min = (self.current_cost - self.current_san) * 6 
                     print("  Not enough san, waiting for recovery: ", wait_min, "min")
                     recovery_wait_sec = randint(*recovery_wait_time)
-                    print("  Adding {} secs as additional recovery time", recovery_wait_sec)
+                    print("  Adding {} secs as additional recovery time".format(recovery_wait_sec))
                     wait_sec = 60 * wait_min + recovery_wait_sec
                     next_run_ts = int(time()) + wait_sec
                     print("- Next scheduled check time: ", datetime.fromtimestamp(next_run_ts))

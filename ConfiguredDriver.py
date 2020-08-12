@@ -76,7 +76,7 @@ class ConfiguredDriver(ArkDriver):
     def goto_map(self, map_name, check_intern=60):
         if self.refresh_map_info():
             if self.current_map_name == map_name:
-                print("- Currently already on map {}, skipping navigation".format(map_name))
+                print("  Currently already on map {}, skipping navigation".format(map_name))
                 return
 
         if not self.goto_missions(check_intern=check_intern):

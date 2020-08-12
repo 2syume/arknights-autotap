@@ -21,6 +21,9 @@ class ConfiguredDriver(ArkDriver):
         self.current_map_name = ""
         self.current_map_name_chi = ""
 
+    def handle_popup(self):
+        pass
+
     def goto_missions(self, check_intern=60):
         failure_timer = 0
         while failure_timer < FAIL_RETRY:

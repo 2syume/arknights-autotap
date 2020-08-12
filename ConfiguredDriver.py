@@ -23,17 +23,28 @@ class ConfiguredDriver(ArkDriver):
         self.current_map_name = ""
         self.current_map_name_chi = ""
 
-    def handle_popup(self):
-        return False
+    def handle_popup(self, delay=15):
+        handled = False
+        self.refresh_screen()
 
-    def interrupt_user(self, check_intern=60):
+        # Communication stuck
+        while self.validate_component("communicating"):
+            handled = True
+            sleep(delay)
+            self.refresh_screen()
+
+        return handled
+
+    def interrupt_user(self, check_intern=30):
         while self.is_in_battle():
             print("  Navigation: wait {} secs for running battle".format(check_intern))
         if self.tap_battle_finished():
             print("  Leaving battle finished page")
 
-    def re_login(self, check_intern=60):
+    def re_login(self, check_intern=30, delay=15):
+        raise Unsupported()
         print("- Re-logging in")
+        # TODO: need to tap something and handle popups BEFORE waiting for login button
         self.refresh_screen()
         while not self.tap_refresh_component("login.start"):
             print("  Waiting {} secs for login button".format(check_intern))
@@ -41,13 +52,13 @@ class ConfiguredDriver(ArkDriver):
             self.refresh_screen()
         print("  Logged in")
         while not self.validate_component("main.settings"):
-            self.handle_popup(check_intern)
-            print("  Waiting {} secs for main page".format(check_intern))
-            sleep(check_intern)
+            self.handle_popup(delay)
+            print("  Waiting {} secs for main page".format(delay))
+            sleep(delay)
             self.refresh_screen()
 
 
-    def home(self, check_intern=60):
+    def home(self, check_intern=30, delay=15):
         self.interrupt_user(check_intern)
         print("- Navigating to main page")
         failure_timer = 0
@@ -55,17 +66,21 @@ class ConfiguredDriver(ArkDriver):
             self.refresh_screen()
             while True:
                 if self.tap_refresh_component("menu") and \
-                    self.tap_refresh_component("menu.main"):
+                    self.tap_refresh_component("menu.main", delay):
                     break
                 if not self.tap_refresh_component("back"):
                     break
+            while self.validate_component("communicating"):
+                print("  Communicating, wait for {} secs".format(delay))
+                sleep(delay)
+                self.refresh_screen()
             if self.validate_component("main.settings"):
                 return True
             print("  State recognition failure: {}/{}".format(failure_timer + 1, FAIL_RETRY))
             failure_timer += 1
         return False
 
-    def goto_missions(self, check_intern=60):
+    def goto_missions(self, check_intern=30):
         self.refresh_screen()
         if self.validate_component("missions.main_story.selected"):
             return True
@@ -111,7 +126,7 @@ class ConfiguredDriver(ArkDriver):
             return True
         return False
     
-    def goto_map(self, map_name, check_intern=60):
+    def goto_map(self, map_name, check_intern=30):
         if self.refresh_map_info():
             if self.current_map_name == map_name:
                 print("  Currently already on map {}, skipping navigation".format(map_name))
@@ -143,7 +158,7 @@ class ConfiguredDriver(ArkDriver):
         raise Unsupported()
 
 
-    def farm_map(self, map_name, times=None, sanity_recovery=True, check_intern=60, wait_time=(30, 60)):
+    def farm_map(self, map_name, times=None, sanity_recovery=True, check_intern=30, wait_time=(30, 60)):
         # Special cases
         # Force sanity recovery off for Obsidian Festival stages
         if map_name.startswith("OF-F"):

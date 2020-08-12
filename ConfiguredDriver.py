@@ -52,7 +52,8 @@ class ConfiguredDriver(ArkDriver):
         if not self.validate_component("battle_finished.title"):
             return False
         sleep(wait)
-        return self.tap_refresh_component("battle_finished.title", delay=15)
+        self.tap_refresh_component("battle_finished.title", delay=15)
+        return True
     
     def tap_prepare_battle(self):
         self.refresh_screen()

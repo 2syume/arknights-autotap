@@ -200,6 +200,19 @@ components:
     - 30
     - 40
     type: ssim
+  missions.main_story.inner:
+    canny_args: null
+    crop: !!python/tuple
+    - 15
+    - 625
+    - 145
+    - 695
+    min_conf: 0.8
+    tap_offset: !!python/tuple
+    - 65
+    - 35
+    threshold: null
+    type: ssim
   missions.main_story.selected:
     canny_args: null
     crop: !!python/tuple

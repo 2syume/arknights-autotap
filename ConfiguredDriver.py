@@ -82,7 +82,7 @@ class ConfiguredDriver(ArkDriver):
 
     def goto_missions(self, check_intern=30):
         self.refresh_screen()
-        if self.validate_component("missions.main_story.selected"):
+        if self.validate_component("missions.main_story.inner"):
             return True
         if not self.home(check_intern):
             return False

@@ -217,8 +217,7 @@ class ArkDriver(object):
                 return None
 
 
-        self.swipe_refresh(*config["init_swipe"])
-        count = 0
+        count = -1
         last_query_result = None
         while True:
             query_result = self.query_set(config["query_set"])
@@ -230,7 +229,10 @@ class ArkDriver(object):
                 return []
             last_query_result = query_result
 
-            self.swipe_refresh(*config["next_swipe"])
+            if count == -1:
+                self.swipe_refresh(*config["init_swipe"])
+            else:
+                self.swipe_refresh(*config["next_swipe"])
             count += 1
             if count > config["bound"]:
                 return []

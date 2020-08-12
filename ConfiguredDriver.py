@@ -65,6 +65,8 @@ class ConfiguredDriver(ArkDriver):
         while failure_timer < FAIL_RETRY:
             self.refresh_screen()
             while True:
+                if self.tap_refresh_component("menu.main", delay):
+                    break
                 if self.tap_refresh_component("menu") and \
                     self.tap_refresh_component("menu.main", delay):
                     break
@@ -121,8 +123,11 @@ class ConfiguredDriver(ArkDriver):
         if info:
             self.current_map_name_chi = info[0].replace(" ", "")
             self.current_map_name = info[1]
-            self.current_cost = int(info[2].strip("-"))
-            self.current_san = int(info[3].split("/")[0])
+            try:
+                self.current_cost = int(info[2].strip("-"))
+                self.current_san = int(info[3].split("/")[0])
+            except ValueError:
+                return False
             return True
         return False
     

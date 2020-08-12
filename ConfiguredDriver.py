@@ -31,6 +31,21 @@ class ConfiguredDriver(ArkDriver):
         if self.tap_battle_finished():
             print("  Leaving battle finished page")
 
+    def re_login(self, check_intern=60):
+        print("- Re-logging in")
+        self.refresh_screen()
+        while not self.tap_refresh_component("login.start"):
+            print("  Waiting {} secs for login button".format(check_intern))
+            sleep(check_intern)
+            self.refresh_screen()
+        print("  Logged in")
+        while not self.validate_component("main.settings"):
+            self.handle_popup(check_intern)
+            print("  Waiting {} secs for main page".format(check_intern))
+            sleep(check_intern)
+            self.refresh_screen()
+
+
     def goto_missions(self, check_intern=60):
         failure_timer = 0
         while failure_timer < FAIL_RETRY:

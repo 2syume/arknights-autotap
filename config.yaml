@@ -85,6 +85,18 @@ components:
     min_conf: 0.6
     tap_offset: null
     type: ssim
+  login.start:
+    canny_args: null
+    crop: !!python/tuple
+    - 625
+    - 666
+    - 655
+    - 696
+    min_conf: 0.8
+    tap_offset: !!python/tuple
+    - 15
+    - 15
+    type: ssim
   main.missions:
     config: null
     crop: !!python/tuple

@@ -295,3 +295,21 @@ query_sets:
       - 15
       type: tap
     type: float
+searches:
+  maps.map_entry:
+    bound: 20
+    deps:
+    - menu
+    init_swipe: !!python/tuple
+    - 50
+    - 360
+    - 50000
+    - 0
+    - 1000
+    next_swipe: !!python/tuple
+    - 1000
+    - 360
+    - -800
+    - 0
+    - 2500
+    query_set: maps.map_name

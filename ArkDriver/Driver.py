@@ -1,6 +1,7 @@
 from .AndroidDev import AndroidDev
 from .cvUtils import *
 from pprint import pprint
+from time import sleep
 import yaml, pickle
 import cv2
 
@@ -10,13 +11,13 @@ class ArkDriver(object):
             self._dev = android_dev
         else:
             self._dev = AndroidDev()
-        self.config = {"geometry": self._dev.get_geometry(), "components":{}, "boxes": {}, "query_sets": {}}
+        self.config = {"geometry": self._dev.get_geometry(), "components":{}, "boxes": {}, "query_sets": {}, "searches": {}}
         self.geometry = self._dev.get_geometry()
         self.ref_data = {"components":{}, "queries": {}, "subimages":{}}
         self.component_validation_cache = {}
         self.box_cache = {}
         self.query_set_cache = {}
-    
+
     def load_from_file(self, config_fn="config.yaml", ref_data_fn="ref.data"):
         with open(config_fn) as f:
             self.config = yaml.load(f, Loader=yaml.CLoader)
@@ -43,6 +44,20 @@ class ArkDriver(object):
 
     def set_query_set(self, name, q_set):
         self.config["query_sets"][name] = q_set
+    
+    def set_search(self, name, search):
+        self.config["searches"][name] = search
+    
+    def tap_refresh(self, x, y, delay=2.5):
+        self._dev.tap(x, y)
+        sleep(delay)
+        self.refresh_screen()
+
+    def swipe_refresh(self, x, y, dx, dy, t, delay=2.5):
+        self._dev.swipe(x, y, dx, dy, t)
+        sleep(delay)
+        self.refresh_screen()
+
     
     def clear_caches(self):
         self.component_validation_cache.clear()
@@ -84,14 +99,14 @@ class ArkDriver(object):
                 self.component_validation_cache[name] = False
                 return False
     
-    def tap_component(self, name):
+    def tap_refresh_component(self, name, delay=2.5):
         if not self.validate_component(name):
             return False
         config = self.config["components"][name]
 
         tap_position = (config["crop"][0] + config["tap_offset"][0],
                         config["crop"][1] + config["tap_offset"][1])
-        self._dev.tap(*tap_position)
+        self.tap_refresh(*tap_position, delay)
         return True
 
     def find_box(self, name, draw=False):
@@ -191,6 +206,34 @@ class ArkDriver(object):
                     return None
                 tap_offset = (tap_offset[0] + offset[0], tap_offset[1] + offset[1])
             return tap_offset
+
+    def search(self, name, callback):
+        if not name in self.config["searches"]:
+            return None
+        config = self.config["searches"][name]
+
+        for dep in config["deps"]:
+            if not self.validate_component(dep):
+                return None
+
+
+        self.swipe_refresh(*config["init_swipe"])
+        count = 0
+        last_query_result = None
+        while True:
+            query_result = self.query_set(config["query_set"])
+            result = [r for r in query_result if callback(r)]
+            if result:
+                return result
+            
+            if last_query_result == query_result:
+                return []
+            last_query_result = query_result
+
+            self.swipe_refresh(*config["next_swipe"])
+            count += 1
+            if count > config["bound"]:
+                return []
 
 
     def new_ssim_component(self, crop,
@@ -334,3 +377,12 @@ class ArkDriver(object):
         }
         return spec
     
+    def new_search(self, deps, init_swipe, next_swipe, query_set, bound=20):
+        spec = {
+            "deps": deps,
+            "init_swipe": init_swipe,
+            "next_swipe": next_swipe,
+            "query_set": query_set,
+            "bound": bound
+        }
+        return spec

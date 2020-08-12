@@ -49,6 +49,44 @@ components:
     - 70
     - 20
     type: ssim
+  battle_finished.title:
+    config: null
+    crop: !!python/tuple
+    - 20
+    - 580
+    - 420
+    - 680
+    lang: chi_sim
+    tap_offset: !!python/tuple
+    - 200
+    - 50
+    text: "\u884C \u52A8 \u7ED3 \u675F"
+    threshold: 200
+    type: ocr
+  in_battle.take_over:
+    canny_args: null
+    crop: !!python/tuple
+    - 455
+    - 625
+    - 610
+    - 685
+    min_conf: 0.8
+    tap_offset: null
+    type: ssim
+  main.missions:
+    config: null
+    crop: !!python/tuple
+    - 900
+    - 120
+    - 1055
+    - 200
+    lang: chi_sim
+    tap_offset: !!python/tuple
+    - 100
+    - 40
+    text: "\u4F5C \u6218"
+    threshold: 200
+    type: ocr
   main.settings:
     canny_args: !!python/tuple
     - 400
@@ -61,6 +99,20 @@ components:
     min_conf: 0.8
     tap_offset: null
     type: ssim
+  main.tasks:
+    config: null
+    crop: !!python/tuple
+    - 715
+    - 555
+    - 805
+    - 615
+    lang: chi_sim
+    tap_offset: !!python/tuple
+    - 100
+    - 40
+    text: "\u4EFB \u52A1"
+    threshold: 200
+    type: ocr
   map_selected.start:
     config: null
     crop: !!python/tuple
@@ -144,6 +196,18 @@ components:
     tap_offset: !!python/tuple
     - 140
     - 35
+    type: ssim
+  prepare.start:
+    canny_args: null
+    crop: !!python/tuple
+    - 1040
+    - 370
+    - 1165
+    - 640
+    min_conf: 0.8
+    tap_offset: !!python/tuple
+    - 60
+    - 150
     type: ssim
   tasks.got_rewards:
     config: null

@@ -551,7 +551,7 @@ query_sets:
       - 275
       - 670
       lang: eng
-      threshold: 200
+      threshold: 150
       type: ocr
     type: fixed
 searches:

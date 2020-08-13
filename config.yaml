@@ -44,10 +44,23 @@ components:
     - 15
     - 140
     - 60
-    min_conf: 0.8
+    min_conf: 0.9
     tap_offset: !!python/tuple
     - 70
     - 20
+    type: ssim
+  base.main.overview:
+    canny_args: null
+    crop: !!python/tuple
+    - 25
+    - 90
+    - 225
+    - 150
+    min_conf: 0.8
+    tap_offset: !!python/tuple
+    - 100
+    - 30
+    threshold: null
     type: ssim
   battle_finished.title:
     config: null
@@ -108,6 +121,20 @@ components:
     - 15
     - 15
     type: ssim
+  main.base:
+    config: null
+    crop: !!python/tuple
+    - 930
+    - 575
+    - 1040
+    - 645
+    lang: chi_sim
+    tap_offset: !!python/tuple
+    - 55
+    - 35
+    text: "\u57FA \u5EFA"
+    threshold: 200
+    type: ocr
   main.missions:
     config: null
     crop: !!python/tuple
@@ -173,6 +200,19 @@ components:
     tap_offset: !!python/tuple
     - 100
     - 20
+    type: ssim
+  menu.base:
+    canny_args: null
+    crop: !!python/tuple
+    - 655
+    - 50
+    - 715
+    - 125
+    min_conf: 0.8
+    tap_offset: !!python/tuple
+    - 30
+    - 30
+    threshold: null
     type: ssim
   menu.main:
     canny_args: !!python/tuple
@@ -290,6 +330,117 @@ components:
     - 673
     min_conf: 0.8
     tap_offset: null
+    type: ssim
+  popup.announcement.close:
+    canny_args: !!python/tuple
+    - 100
+    - 200
+    crop: !!python/tuple
+    - 1220
+    - 40
+    - 1255
+    - 75
+    min_conf: 0.8
+    tap_offset: !!python/tuple
+    - 15
+    - 15
+    threshold: null
+    type: ssim
+  popup.error.autopilot_sync_failure:
+    config: null
+    crop: !!python/tuple
+    - 400
+    - 315
+    - 880
+    - 345
+    lang: chi_sim
+    tap_offset: null
+    text: "\u672A \u80FD \u540C \u6B65 \u5230 \u76F8 \u5173 \u6218 \u6597 \u8BB0 \u5F55
+      , \u65E0 \u6CD5 \u4EE3 \u7406 \u6307 \u6325"
+    threshold: 200
+    type: ocr
+  popup.generic_info.confirm:
+    canny_args: null
+    crop: !!python/tuple
+    - 545
+    - 475
+    - 735
+    - 535
+    min_conf: 0.8
+    tap_offset: !!python/tuple
+    - 95
+    - 30
+    threshold: null
+    type: ssim
+  popup.got_rewards:
+    canny_args: !!python/tuple
+    - 200
+    - 400
+    crop: !!python/tuple
+    - 575
+    - 35
+    - 710
+    - 140
+    min_conf: 0.8
+    tap_offset: !!python/tuple
+    - 65
+    - 605
+    threshold: null
+    type: ssim
+  popup.loading:
+    config: null
+    crop: !!python/tuple
+    - 310
+    - 350
+    - 395
+    - 370
+    lang: eng
+    tap_offset: !!python/tuple
+    - 200
+    - 200
+    text: Loading...
+    threshold: 65
+    type: ocr
+  popup.relogin.outdated:
+    config: null
+    crop: !!python/tuple
+    - 465
+    - 315
+    - 815
+    - 345
+    lang: chi_sim
+    tap_offset: null
+    text: "\u6570 \u636E \u6587 \u4EF6 \u5DF2 \u8FC7 \u671F , \u8BF7 \u91CD \u65B0
+      \u767B \u5F55"
+    threshold: 200
+    type: ocr
+  popup.relogin.reauth:
+    config: null
+    crop: !!python/tuple
+    - 465
+    - 315
+    - 815
+    - 345
+    lang: chi_sim
+    tap_offset: null
+    text: "\u767B \u5F55 \u8BA4 \u8BC1 \u5DF2 \u5931 \u6548 , \u8BF7 \u91CD \u65B0
+      \u767B \u5F55"
+    threshold: 200
+    type: ocr
+  popup.signin.close:
+    canny_args: !!python/tuple
+    - 100
+    - 200
+    crop: !!python/tuple
+    - 1185
+    - 60
+    - 1220
+    - 95
+    min_conf: 0.8
+    tap_offset: !!python/tuple
+    - 15
+    - 15
+    threshold: null
     type: ssim
   prepare.start:
     canny_args: null

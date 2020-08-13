@@ -103,6 +103,7 @@ class ArkDriver(object):
             self.last_log = {
                 "name": name,
                 "result": result,
+                "conf": conf,
                 "src_img": cropped,
                 "ref_img": ref
             }

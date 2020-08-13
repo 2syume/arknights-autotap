@@ -20,6 +20,7 @@ try:
             if obs_count >= 1060:
                 farm_plan = ("OF-8", 1)
             driver.farm_map(*farm_plan)
+            driver.exc_log.clear()
         except UnexpectedState:
             last_log = driver.last_log
             exc = driver.recover_from_exc(sys.exc_info())
@@ -32,5 +33,6 @@ try:
                 print(">>> Last log of failure")
                 driver.print_last_log(last_log=last_log, show_img=False)
                 print("<<<")
+                print("> Recovered, try again")
 except KeyboardInterrupt:
     pass

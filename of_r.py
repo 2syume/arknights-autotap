@@ -22,17 +22,9 @@ try:
             driver.farm_map(*farm_plan)
             driver.exc_log.clear()
         except UnexpectedState:
-            last_log = driver.last_log
             exc = driver.recover_from_exc(sys.exc_info())
             if exc is not None:
-                print(">>> Last log of failure w/ image")
-                driver.print_last_log(last_log=last_log)
-                print("<<<")
+                driver.dump_exc_full_log()
                 raise exc
-            else:
-                print(">>> Last log of failure")
-                driver.print_last_log(last_log=last_log, show_img=False)
-                print("<<<")
-                print("> Recovered, try again")
 except KeyboardInterrupt:
     pass

@@ -68,6 +68,11 @@ class ArkDriver(object):
             for name, img in [(k,v) for k,v in last_log.items() if k.endswith("_img")]:
                 img.show(title=name)
     
+    def dump_last_log(self, last_log=None):
+        if last_log is None:
+            last_log = self.last_log
+        return dict((k, pil_to_bytes(v) if k.endswith("_img") else v) for k,v in last_log.items())
+    
     def clear_caches(self):
         self.component_validation_cache.clear()
         self.box_cache.clear()
@@ -105,7 +110,8 @@ class ArkDriver(object):
                 "result": result,
                 "conf": conf,
                 "src_img": cropped,
-                "ref_img": ref
+                "ref_img": ref,
+                "screen_img": self._dev.get_screen()
             }
 
             if result:
@@ -125,7 +131,8 @@ class ArkDriver(object):
                 "result": result,
                 "src_img": cropped,
                 "src_text": text,
-                "ref_text": config["text"]
+                "ref_text": config["text"],
+                "screen_img": self._dev.get_screen()
             }
 
             if result:
@@ -169,7 +176,8 @@ class ArkDriver(object):
             self.last_log = {
                 "name": name,
                 "result": floats,
-                "boxes_img": drawn
+                "boxes_img": drawn,
+                "screen_img": self._dev.get_screen()
             }
 
             self.box_cache[name] = floats
@@ -184,7 +192,8 @@ class ArkDriver(object):
             self.last_log = {
                 "name": name,
                 "result": rects,
-                "boxes_img": drawn
+                "boxes_img": drawn,
+                "screen_img": self._dev.get_screen()
             }
 
             self.box_cache[name] = rects
@@ -204,7 +213,8 @@ class ArkDriver(object):
             self.last_log = {
                 "name": name,
                 "result": boxes,
-                "boxes_img": drawn
+                "boxes_img": drawn,
+                "screen_img": self._dev.get_screen()
             }
 
             self.box_cache[name] = boxes
@@ -226,7 +236,8 @@ class ArkDriver(object):
 
             self.last_log = {
                 "name": name,
-                "result": result
+                "result": result,
+                "screen_img": self._dev.get_screen()
             }
 
             self.query_set_cache[name] = result
@@ -237,7 +248,8 @@ class ArkDriver(object):
 
             self.last_log = {
                 "name": name,
-                "result": result
+                "result": result,
+                "screen_img": self._dev.get_screen()
             }
 
             self.query_set_cache[name] = result
@@ -333,7 +345,8 @@ class ArkDriver(object):
             "name": name,
             "result": result,
             "search_log": search_log,
-            "status": status
+            "status": status,
+            "screen_img": self._dev.get_screen()
         }
         return result
 

@@ -2,6 +2,8 @@ from ArkDriver.Driver import ArkDriver
 from time import sleep, time
 from datetime import datetime
 from random import randint
+import pickle
+import traceback
 
 class UnexpectedState(Exception):
     def __init__(self, *args, **argv):
@@ -20,6 +22,11 @@ class ConfiguredDriver(ArkDriver):
         self.current_map_name = ""
         self.current_map_name_chi = ""
         self.exc_log = {}
+        self.exc_full_log = []
+
+    def dump_exc_full_log(self, fn="exc_full_log.data"):
+        with open(fn, "wb") as f:
+            pickle.dump(self.exc_full_log, f)
 
     def handle_popup(self, delay=15, retries=3, retry_intern=5):
         print("- Handling possible popups")
@@ -91,10 +98,12 @@ class ConfiguredDriver(ArkDriver):
     # -> None: Successful recovery
     # -> Others: Failure to recover, should raise return value immediately
     def recover_from_exc(self, exc_info, retries=5, retry_intern=15):
+        last_log = self.last_log
         if self.handle_popup():
             return None
 
         exc_type, exc, tb = exc_info
+        self.exc_full_log.append((traceback.format_exception(exc_type, exc, tb), self.dump_last_log(last_log)))
         while tb.tb_next is not None:
             tb = tb.tb_next
         f = tb.tb_frame
@@ -107,6 +116,7 @@ class ConfiguredDriver(ArkDriver):
         count = self.exc_log.get((filename, lineno), 0)
         if count >= retries:
             return exc
+        self.print_last_log(last_log=last_log, show_img=False)
         print("> Recovering from exception in {}:{} : {}({}) Retries: {}/{}".format(filename, lineno, exc_type.__name__, exc, count+1, retries))
         count += 1
         self.exc_log[(filename, lineno)] = count

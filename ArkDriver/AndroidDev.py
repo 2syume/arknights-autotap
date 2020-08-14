@@ -10,7 +10,7 @@ class AndroidDev(object):
             self._dev = adb.device(serial=serial)
         else:
             self._dev = adb.device()
-        self._screenshot_retry_wait = 0.5
+        self._screenshot_retry_wait = 1.0
         self._screenshot_on_dev_path = "/sdcard/screen.png"
         self._screen = None
         self._geometry = None

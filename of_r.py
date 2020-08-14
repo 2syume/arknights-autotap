@@ -26,5 +26,7 @@ try:
             if exc is not None:
                 driver.dump_exc_full_log()
                 raise exc
+            else:
+                print("- Recovered")
 except KeyboardInterrupt:
     pass

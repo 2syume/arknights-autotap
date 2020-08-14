@@ -16,7 +16,7 @@ try:
             obs_count = int(obsidian_query[0])
             print("- Current Obsidian count: {}".format(obs_count))
 
-            farm_plan = ("OF-6", 3)
+            farm_plan = ("OF-6", min(3, (obs_count - 1060)//28 + 1))
             if obs_count >= 1060:
                 farm_plan = ("OF-8", 1)
             driver.farm_map(*farm_plan)

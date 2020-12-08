@@ -57,7 +57,7 @@ def validate_task_page(dev):
     text_crop = img_obj.crop((1130, 575, 1240, 610))
     mono_crop = monochrome_threshold(text_crop, 150)
     text = image_to_string(mono_crop, lang='chi_sim')
-    if text != '代 理 指 挥':
+    if not '代 理 指 挥' in text:
         raise OCRValidationException('代 理 指 挥', text)
 
 def is_currently_on_level_up_page(dev):
@@ -67,7 +67,7 @@ def is_currently_on_level_up_page(dev):
         text_crop = img_obj.crop((290, 350, 475, 400))
         mono_crop = monochrome_threshold(text_crop, 250, True)
         text = image_to_string(mono_crop, lang='chi_sim')
-        if text == '等 级 提 升':
+        if '等 级 提 升' in text:
             return True
     return False
 
@@ -76,19 +76,19 @@ def is_battle_page(img_obj):
     text_crop = img_obj.crop((505, 640, 605, 670))
     mono_crop = monochrome_threshold(text_crop, 200, True)
     text = image_to_string(mono_crop, lang='chi_sim')
-    return text == '接 管 作 战'
+    return '接 管 作 战' in text
 
 def is_result_page(img_obj):
     text_crop = img_obj.crop((25, 575, 425, 685))
     mono_crop = monochrome_threshold(text_crop, 200, True)
     text = image_to_string(mono_crop, lang='chi_sim')
-    return text == '行 动 结 束'
+    return '行 动 结 束' in text
 
 def is_annihilation_summary_page(img_obj):
     text_crop = img_obj.crop((75, 175, 200, 215))
     mono_crop = monochrome_threshold(text_crop, 200, True)
     text = image_to_string(mono_crop, lang='chi_sim')
-    return text == '作 战 简 报'
+    return '作 战 简 报' in text
 
 
 def main():

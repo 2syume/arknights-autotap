@@ -124,10 +124,22 @@ def main():
     start_time = int(time())
     if args.offset_mode:
         global OFFSET_X, OFFSET_Y
+
+        print("Finding window ID")
+        anbox_wins = sh.xdotool("search", "--class", "anbox").stdout.decode().strip().split()
+        anbox_win_id = None
+        for win in anbox_wins:
+            if sh.xdotool("getwindowname", win).stdout.decode().strip() == "arknights":
+                anbox_win_id = int(win)
+        if not anbox_win_id:
+            raise Exception("Anbox arknights window not found")
+        print("WIN ID: {}".format(anbox_win_id))
+
         print("Resizing window in place")
-        sh.wmctrl("-r", "arknights", "-e", "0,-1,-1,{},{}".format(1280, 720+BAR_HEIGHT))
+        sh.wmctrl("-i", "-r", "{0:#0{1}x}".format(anbox_win_id, 10), "-e", "0,-1,-1,{},{}".format(1280, 720+BAR_HEIGHT))
+
         print("Reading window position")
-        result = sh.xdotool("search", "--name", "arknights", "getwindowgeometry", "--shell")
+        result = sh.xdotool("getwindowgeometry", "--shell", str(anbox_win_id))
         lines = result.stdout.decode().strip().split()
         x = int(lines[1].partition("=")[2])
         y = int(lines[2].partition("=")[2])

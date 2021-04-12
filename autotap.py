@@ -8,6 +8,7 @@ from PIL import Image
 from PIL.ImageOps import invert
 from pytesseract import image_to_string
 from io import BytesIO
+import sh
 
 class OCRValidationException(Exception):
     def __init__(self, excepted, got):
@@ -15,6 +16,14 @@ class OCRValidationException(Exception):
 
 class OCRUnsupportedPageException(Exception):
     pass
+
+OFFSET_X = 0
+OFFSET_Y = 0
+BAR_HEIGHT=42
+def offset_point(*p):
+    return (p[0]+OFFSET_X, p[1]+OFFSET_Y, p[2]+OFFSET_X, p[3]+OFFSET_Y)
+def offset_tap(*s):
+    return [s[0], s[1], str(s[2]+OFFSET_X), str(s[3]+OFFSET_Y)]
 
 def get_screenshot(dev):
     while True:
@@ -46,7 +55,7 @@ def monochrome_threshold(img, threshhold, invert_img=False):
 def get_sanity(dev):
     img = get_screenshot(dev)
     img_obj = Image.open(img)
-    sanity_crop = img_obj.crop((1120, 20, 1250, 60))
+    sanity_crop = img_obj.crop(offset_point(1120, 20, 1250, 60))
     mono_crop = monochrome_threshold(sanity_crop, 200, True)
     sanity_str = image_to_string(mono_crop)
     return int(sanity_str.split("/")[0])
@@ -54,7 +63,7 @@ def get_sanity(dev):
 def validate_task_page(dev):
     img = get_screenshot(dev)
     img_obj = Image.open(img)
-    text_crop = img_obj.crop((1130, 575, 1240, 610))
+    text_crop = img_obj.crop(offset_point(1130, 575, 1240, 610))
     mono_crop = monochrome_threshold(text_crop, 150)
     text = image_to_string(mono_crop, lang='chi_sim')
     if not '代 理 指 挥' in text:
@@ -64,7 +73,7 @@ def is_currently_on_level_up_page(dev):
     for i in range(3):
         img = get_screenshot(dev)
         img_obj = Image.open(img)
-        text_crop = img_obj.crop((290, 350, 475, 400))
+        text_crop = img_obj.crop(offset_point(290, 350, 475, 400))
         mono_crop = monochrome_threshold(text_crop, 250, True)
         text = image_to_string(mono_crop, lang='chi_sim')
         if '等 级 提 升' in text:
@@ -73,19 +82,19 @@ def is_currently_on_level_up_page(dev):
 
 
 def is_battle_page(img_obj):
-    text_crop = img_obj.crop((505, 640, 605, 670))
+    text_crop = img_obj.crop(offset_point(505, 640, 605, 670))
     mono_crop = monochrome_threshold(text_crop, 200, True)
     text = image_to_string(mono_crop, lang='chi_sim')
     return '接 管 作 战' in text
 
 def is_result_page(img_obj):
-    text_crop = img_obj.crop((25, 575, 425, 685))
+    text_crop = img_obj.crop(offset_point(25, 575, 425, 685))
     mono_crop = monochrome_threshold(text_crop, 200, True)
     text = image_to_string(mono_crop, lang='chi_sim')
     return '行 动 结 束' in text
 
 def is_annihilation_summary_page(img_obj):
-    text_crop = img_obj.crop((75, 175, 200, 215))
+    text_crop = img_obj.crop(offset_point(75, 175, 200, 215))
     mono_crop = monochrome_threshold(text_crop, 200, True)
     text = image_to_string(mono_crop, lang='chi_sim')
     return '作 战 简 报' in text
@@ -103,6 +112,7 @@ def main():
     parser.add_argument("-r", "--recover_to", dest="recover_to", type=int, default=0,
         help="Wait for sanity to recover to this value before next run when sanity is not enough, put 0 to recover to sanity_per_run")
     parser.add_argument("-w", "--no_wait", dest="no_wait", action="store_true", help="Run up to all sanity is used, do not wait for sanity recovery")
+    parser.add_argument("-o", "--offset_mode", dest="offset_mode", default=False, action="store_true", help="Run in multi window offset mode")
     args = parser.parse_args()
 
     if args.serial:
@@ -112,6 +122,18 @@ def main():
     
     finished_runs = 0
     start_time = int(time())
+    if args.offset_mode:
+        global OFFSET_X, OFFSET_Y
+        print("Resizing window in place")
+        sh.wmctrl("-r", "arknights", "-e", "0,-1,-1,{},{}".format(1280, 720+BAR_HEIGHT))
+        print("Reading window position")
+        result = sh.xdotool("search", "--name", "arknights", "getwindowgeometry", "--shell")
+        lines = result.stdout.decode().strip().split()
+        x = int(lines[1].partition("=")[2])
+        y = int(lines[2].partition("=")[2])
+        OFFSET_X = x
+        OFFSET_Y = y + BAR_HEIGHT
+
     try:
         while True:
             if args.total_time > 0 and (int(time()) - start_time) > args.total_time * 60:
@@ -124,10 +146,10 @@ def main():
                 print("Running for", finished_runs+1)
 
                 print("Tapping prepare")
-                dev.shell(["input", "tap", "1100", "650"])
+                dev.shell(offset_tap("input", "tap", 1100, 650))
                 sleep(15)
                 print("Tapping start")
-                dev.shell(["input", "tap", "1100", "500"])
+                dev.shell(offset_tap("input", "tap", 1100, 500))
                 sleep(30)
 
                 check_failures = 0
@@ -145,12 +167,12 @@ def main():
                         break
                     if is_annihilation_summary_page(img_obj):
                         print("Annihilation summary, tapping out")
-                        dev.shell(["input", "tap", "1000", "200"])
+                        dev.shell(offset_tap("input", "tap", 1000, 200))
                         sleep(15)
                         continue
                     if is_currently_on_level_up_page(dev):
                         print("Leveled up, tapping out")
-                        dev.shell(["input", "tap", "1000", "200"])
+                        dev.shell(offset_tap("input", "tap", 1000, 200))
                         sleep(15)
                         continue
                     else:
@@ -164,7 +186,7 @@ def main():
                             sleep(15)
 
                 print("Tapping out")
-                dev.shell(["input", "tap", "1000", "200"])
+                dev.shell(offset_tap("input", "tap", 1000, 200))
 
                 finished_runs += 1
                 print("Run for", finished_runs, "finished")

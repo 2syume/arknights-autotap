@@ -133,6 +133,8 @@ def main():
         y = int(lines[2].partition("=")[2])
         OFFSET_X = x
         OFFSET_Y = y + BAR_HEIGHT
+        print("Tapping to ensure running in front")
+        dev.shell(offset_tap("input", "tap", 1090, 260))
 
     try:
         while True:

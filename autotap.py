@@ -5,7 +5,7 @@ from adbutils import adb
 from time import sleep, time
 from datetime import datetime
 from PIL import Image
-from PIL.ImageOps import invert
+from PIL.ImageOps import crop, invert
 from pytesseract import image_to_string
 from io import BytesIO
 import sh
@@ -19,7 +19,6 @@ class OCRUnsupportedPageException(Exception):
 
 OFFSET_X = 0
 OFFSET_Y = 0
-BAR_HEIGHT=42
 def offset_point(*p):
     return (p[0]+OFFSET_X, p[1]+OFFSET_Y, p[2]+OFFSET_X, p[3]+OFFSET_Y)
 def offset_tap(*s):
@@ -28,13 +27,19 @@ def offset_tap(*s):
 def get_screenshot(dev):
     while True:
         try:
-            dev.shell(["screencap", "-p", "/sdcard/screen.png"])
+            sh.adb("shell", "screencap", "-p", "/sdcard/screen.png")
             img = b''.join(dev.sync.iter_content("/sdcard/screen.png"))
             return BytesIO(img)
         except Exception as e:
             print("Exception when pulling screenshot:", e)
             print("Retrying")
             sleep(0.5)
+
+def crop_screen(dev, point):
+    img = get_screenshot(dev)
+    img_obj = Image.open(img)
+    crop = img_obj.crop(offset_point(*point))
+    return crop
 
 def save_last_screenshot(dev):
     while True:
@@ -53,17 +58,13 @@ def monochrome_threshold(img, threshhold, invert_img=False):
     return l_img.convert("1")
 
 def get_sanity(dev):
-    img = get_screenshot(dev)
-    img_obj = Image.open(img)
-    sanity_crop = img_obj.crop(offset_point(1120, 20, 1250, 60))
+    sanity_crop = crop_screen(dev, (1700, 20, 1900, 100))
     mono_crop = monochrome_threshold(sanity_crop, 200, True)
     sanity_str = image_to_string(mono_crop)
     return int(sanity_str.split("/")[0])
 
 def validate_task_page(dev):
-    img = get_screenshot(dev)
-    img_obj = Image.open(img)
-    text_crop = img_obj.crop(offset_point(1130, 575, 1240, 610))
+    text_crop = crop_screen(dev, (1700, 830, 1860, 880))
     mono_crop = monochrome_threshold(text_crop, 150)
     text = image_to_string(mono_crop, lang='chi_sim')
     if not '代 理 指 挥' in text:
@@ -71,9 +72,7 @@ def validate_task_page(dev):
 
 def is_currently_on_level_up_page(dev):
     for i in range(3):
-        img = get_screenshot(dev)
-        img_obj = Image.open(img)
-        text_crop = img_obj.crop(offset_point(290, 350, 475, 400))
+        text_crop = crop_screen(dev, (435, 525, 713, 600))
         mono_crop = monochrome_threshold(text_crop, 250, True)
         text = image_to_string(mono_crop, lang='chi_sim')
         if '等 级 提 升' in text:
@@ -82,13 +81,13 @@ def is_currently_on_level_up_page(dev):
 
 
 def is_battle_page(img_obj):
-    text_crop = img_obj.crop(offset_point(505, 640, 605, 670))
+    text_crop = img_obj.crop(offset_point(580, 920, 740, 980))
     mono_crop = monochrome_threshold(text_crop, 200, True)
     text = image_to_string(mono_crop, lang='chi_sim')
     return '接 管 作 战' in text
 
 def is_result_page(img_obj):
-    text_crop = img_obj.crop(offset_point(25, 575, 425, 685))
+    text_crop = img_obj.crop(offset_point(30, 820, 600, 1000))
     mono_crop = monochrome_threshold(text_crop, 200, True)
     text = image_to_string(mono_crop, lang='chi_sim')
     return '行 动 结 束' in text
@@ -112,7 +111,6 @@ def main():
     parser.add_argument("-r", "--recover_to", dest="recover_to", type=int, default=0,
         help="Wait for sanity to recover to this value before next run when sanity is not enough, put 0 to recover to sanity_per_run")
     parser.add_argument("-w", "--no_wait", dest="no_wait", action="store_true", help="Run up to all sanity is used, do not wait for sanity recovery")
-    parser.add_argument("-o", "--offset_mode", dest="offset_mode", default=False, action="store_true", help="Run in multi window offset mode")
     args = parser.parse_args()
 
     if args.serial:
@@ -122,32 +120,6 @@ def main():
     
     finished_runs = 0
     start_time = int(time())
-    if args.offset_mode:
-        global OFFSET_X, OFFSET_Y
-
-        print("Finding window ID")
-        anbox_wins = sh.xdotool("search", "--class", "anbox").stdout.decode().strip().split()
-        anbox_win_id = None
-        for win in anbox_wins:
-            if sh.xdotool("getwindowname", win).stdout.decode().strip() == "arknights":
-                anbox_win_id = int(win)
-        if not anbox_win_id:
-            raise Exception("Anbox arknights window not found")
-        print("WIN ID: {}".format(anbox_win_id))
-
-        print("Resizing window in place")
-        sh.wmctrl("-i", "-r", "{0:#0{1}x}".format(anbox_win_id, 10), "-e", "0,-1,-1,{},{}".format(1280, 720+BAR_HEIGHT))
-
-        print("Reading window position")
-        result = sh.xdotool("getwindowgeometry", "--shell", str(anbox_win_id))
-        lines = result.stdout.decode().strip().split()
-        x = int(lines[1].partition("=")[2])
-        y = int(lines[2].partition("=")[2])
-        OFFSET_X = x
-        OFFSET_Y = y + BAR_HEIGHT
-        print("Tapping to ensure running in front")
-        dev.shell(offset_tap("input", "tap", 1090, 260))
-
     try:
         while True:
             if args.total_time > 0 and (int(time()) - start_time) > args.total_time * 60:
@@ -160,10 +132,10 @@ def main():
                 print("Running for", finished_runs+1)
 
                 print("Tapping prepare")
-                dev.shell(offset_tap("input", "tap", 1100, 650))
+                sh.adb("shell", offset_tap("input", "tap", 1650, 950))
                 sleep(15)
                 print("Tapping start")
-                dev.shell(offset_tap("input", "tap", 1100, 500))
+                sh.adb("shell", offset_tap("input", "tap", 1650, 750))
                 sleep(30)
 
                 check_failures = 0
@@ -181,12 +153,12 @@ def main():
                         break
                     if is_annihilation_summary_page(img_obj):
                         print("Annihilation summary, tapping out")
-                        dev.shell(offset_tap("input", "tap", 1000, 200))
+                        sh.adb("shell", offset_tap("input", "tap", 1000, 200))
                         sleep(15)
                         continue
                     if is_currently_on_level_up_page(dev):
                         print("Leveled up, tapping out")
-                        dev.shell(offset_tap("input", "tap", 1000, 200))
+                        sh.adb("shell", offset_tap("input", "tap", 1000, 200))
                         sleep(15)
                         continue
                     else:
@@ -200,7 +172,7 @@ def main():
                             sleep(15)
 
                 print("Tapping out")
-                dev.shell(offset_tap("input", "tap", 1000, 200))
+                sh.adb("shell", offset_tap("input", "tap", 1000, 200))
 
                 finished_runs += 1
                 print("Run for", finished_runs, "finished")

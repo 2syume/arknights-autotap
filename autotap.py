@@ -60,13 +60,13 @@ def monochrome_threshold(img, threshhold, invert_img=False):
 def get_sanity(dev):
     sanity_crop = crop_screen(dev, (1700, 20, 1900, 100))
     mono_crop = monochrome_threshold(sanity_crop, 200, True)
-    sanity_str = image_to_string(mono_crop)
+    sanity_str = image_to_string(mono_crop, config="--psm 7")
     return int(sanity_str.split("/")[0])
 
 def validate_task_page(dev):
     text_crop = crop_screen(dev, (1700, 830, 1860, 880))
     mono_crop = monochrome_threshold(text_crop, 150)
-    text = image_to_string(mono_crop, lang='chi_sim')
+    text = image_to_string(mono_crop, config="--psm 7", lang='chi_sim')
     if not '代 理 指 挥' in text:
         raise OCRValidationException('代 理 指 挥', text)
 
@@ -74,7 +74,7 @@ def is_currently_on_level_up_page(dev):
     for i in range(3):
         text_crop = crop_screen(dev, (435, 525, 713, 600))
         mono_crop = monochrome_threshold(text_crop, 250, True)
-        text = image_to_string(mono_crop, lang='chi_sim')
+        text = image_to_string(mono_crop, config="--psm 7", lang='chi_sim')
         if '等 级 提 升' in text:
             return True
     return False
@@ -83,19 +83,19 @@ def is_currently_on_level_up_page(dev):
 def is_battle_page(img_obj):
     text_crop = img_obj.crop(offset_point(580, 920, 740, 980))
     mono_crop = monochrome_threshold(text_crop, 200, True)
-    text = image_to_string(mono_crop, lang='chi_sim')
+    text = image_to_string(mono_crop, config="--psm 7", lang='chi_sim')
     return '接 管 作 战' in text
 
 def is_result_page(img_obj):
     text_crop = img_obj.crop(offset_point(30, 820, 600, 1000))
     mono_crop = monochrome_threshold(text_crop, 200, True)
-    text = image_to_string(mono_crop, lang='chi_sim')
+    text = image_to_string(mono_crop, config="--psm 7", lang='chi_sim')
     return '行 动 结 束' in text
 
 def is_annihilation_summary_page(img_obj):
     text_crop = img_obj.crop(offset_point(75, 175, 200, 215))
     mono_crop = monochrome_threshold(text_crop, 200, True)
-    text = image_to_string(mono_crop, lang='chi_sim')
+    text = image_to_string(mono_crop, config="--psm 7", lang='chi_sim')
     return '作 战 简 报' in text
 
 

@@ -63,6 +63,13 @@ def get_sanity(dev):
     sanity_str = image_to_string(mono_crop, config="--psm 7")
     return int(sanity_str.split("/")[0])
 
+def get_cost(dev):
+    sanity_crop = crop_screen(dev, (1770, 990, 1840, 1020))
+    mono_crop = monochrome_threshold(sanity_crop, 150, True)
+    cost_str = image_to_string(mono_crop, config="--psm 7")
+    cost_str = cost_str.strip()
+    return int(cost_str.strip("-"))
+
 def validate_task_page(dev):
     text_crop = crop_screen(dev, (1700, 840, 1860, 890))
     mono_crop = monochrome_threshold(text_crop, 150)
@@ -102,7 +109,7 @@ def is_annihilation_summary_page(img_obj):
 
 def main():
     parser = argparse.ArgumentParser(description="Arknights auto tapper")
-    parser.add_argument("sanity_per_run", type=int, help="Sanity needed per run")
+    parser.add_argument("sanity_per_run", nargs="?", type=int, help="Sanity needed per run")
     parser.add_argument("-S", "--serial", dest="serial", type=str, default="", help="Device serial number")
     parser.add_argument("-n", "--num", dest="num", type=int, default=0, help="Number of runs to perform, 0 for infinite")
     parser.add_argument("-g", "--gap", dest="gap", type=int, default=1, help="Fixed gap time in minutes between iterations")
@@ -127,6 +134,10 @@ def main():
                 print("Exceeding total time bound, quit.")
                 break
             validate_task_page(dev)
+            if not args.sanity_per_run:
+                cost = get_cost(dev)
+                print("Got sanity cost:", cost)
+                args.sanity_per_run = cost
             sanity = get_sanity(dev)
             print("Current sanity:", sanity)
             if sanity >= args.sanity_per_run:
